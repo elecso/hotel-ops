@@ -1,6 +1,26 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+let anthropicInstance: Anthropic | null = null
+
+function getAnthropic() {
+  if (!anthropicInstance) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    
+    if (!apiKey || apiKey === 'your_anthropic_api_key') {
+      console.warn('ANTHROPIC_API_KEY is missing or using placeholder.')
+      return {
+        messages: {
+          create: async () => {
+            throw new Error('Cannot use Anthropic: API key is missing or invalid.')
+          }
+        }
+      } as unknown as Anthropic
+    }
+    
+    anthropicInstance = new Anthropic({ apiKey })
+  }
+  return anthropicInstance
+}
 
 export interface ParsedInvoiceLine {
   raw_description: string
@@ -22,7 +42,7 @@ export interface ParsedFbLine {
 export async function parseInvoiceFile(base64Content: string, mediaType: string): Promise<ParsedInvoiceLine[]> {
   const isPdf = mediaType === 'application/pdf'
 
-  const message = await client.messages.create({
+  const message = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 4096,
     system: 'You are a hotel procurement assistant. Extract all line items from this invoice as a JSON array: [{raw_description, qty, unit, unit_price, total, supplier_name, invoice_date}]. Return ONLY valid JSON. No markdown, no preamble, no explanation.',
@@ -42,7 +62,7 @@ export async function parseInvoiceFile(base64Content: string, mediaType: string)
 export async function parseFbFile(base64Content: string, mediaType: string): Promise<ParsedFbLine[]> {
   const isPdf = mediaType === 'application/pdf'
 
-  const message = await client.messages.create({
+  const message = await getAnthropic().messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 4096,
     system: 'You are a restaurant sales analyst. Extract all sold items from this file as JSON: [{raw_name, qty, unit_price, total_revenue}]. Return ONLY valid JSON. No markdown, no preamble.',

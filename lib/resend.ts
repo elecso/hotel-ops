@@ -1,6 +1,30 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let resendInstance: Resend | null = null
+
+function getResend() {
+  if (!resendInstance) {
+    const apiKey = process.env.RESEND_API_KEY
+    
+    // Check if key is missing or is the placeholder from .env.local
+    if (!apiKey || apiKey === 'your_resend_api_key') {
+      // During build, we might not have the key. Return a proxy or throw only at runtime.
+      console.warn('RESEND_API_KEY is missing or using placeholder. Emails will not be sent.')
+      // Create a dummy object to prevent crashes if something calls it but doesn't await it? 
+      // Actually, better to just return a dummy that throws when used.
+      return {
+        emails: {
+          send: async () => {
+            throw new Error('Cannot send email: RESEND_API_KEY is missing or invalid.')
+          }
+        }
+      } as unknown as Resend
+    }
+    
+    resendInstance = new Resend(apiKey)
+  }
+  return resendInstance
+}
 
 export interface StockAlertParams {
   productName: string
@@ -86,7 +110,7 @@ export async function sendStockAlert(params: StockAlertParams) {
 </body>
 </html>`
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: `Mercure Operations <${process.env.RESEND_FROM_EMAIL ?? 'operations@mercure-hotels.com'}>`,
     to: [process.env.ALERT_EMAIL_TO ?? 'gm@mercure-hotels.com'],
     subject: `⚠️ Stock bas — ${productName}`,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
-import { sendStockAlert } from '@/lib/resend'
+// import { sendStockAlert } from '@/lib/resend'
 import { currentMonth } from '@/lib/utils'
 
 function getSupabase() {
@@ -35,6 +36,7 @@ export async function POST(_req: NextRequest) {
 
       if (minStock > 0 && theoretical < minStock) {
         try {
+          const { sendStockAlert } = await import('@/lib/resend')
           await sendStockAlert({
             productName: row.product?.name ?? 'Produit inconnu',
             currentStock: theoretical,

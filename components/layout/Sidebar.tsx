@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, BookOpen, Package, ChefHat, Calendar, Upload, ClipboardList, FileText, Users,
-  LogOut, ChevronDown, ChevronRight,
+  LogOut, ChevronDown, ChevronRight, TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -41,11 +41,21 @@ const navItems: NavItem[] = [
   { label: 'Upload F&B',    href: '/upload-fb',            icon: <Upload size={16} />,       color: '#e11d48' },
   {
     label: 'Réquisitions', icon: <ClipboardList size={16} />, color: '#0284c7', children: [
-      { label: 'Créer',   href: '/requisitions' },
-      { label: 'Valider', href: '/requisitions/validate' },
+      { label: 'Créer',      href: '/requisitions' },
+      { label: 'Commande',   href: '/requisitions/commande' },
+      { label: 'Valider',    href: '/requisitions/validate' },
     ],
   },
   { label: 'Factures',     href: '/invoices',             icon: <FileText size={16} />,     color: '#16a34a' },
+  {
+    label: 'Cost Control', icon: <TrendingUp size={16} />, color: '#0ea5e9', children: [
+      { label: 'Stats F&B',  href: '/cost-control/stats-fb' },
+      { label: 'Cost Room',  href: '/cost-control/cost-room' },
+      { label: 'Cost Food',  href: '/cost-control/cost-food' },
+      { label: 'Cost Bev',   href: '/cost-control/cost-bev' },
+      { label: 'Cost RH',    href: '/cost-control/cost-rh' },
+    ],
+  },
   { label: 'Utilisateurs', href: '/users',                icon: <Users size={16} />,        color: '#7B6B80' },
 ]
 

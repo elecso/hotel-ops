@@ -1,0 +1,9 @@
+name,sku,unit,packaging_desc,packaging_qty,price_excl_tax,min_stock,delivery_days,purchase_url,hotel_scope,category_name,supplier_name
+"Gel douche 30ml","GEL-001","flacon","Carton 500",500,0.28,200,5,"",mercure,"Soins corporels","Groupe Berto"
+"Shampoing 30ml","SHA-001","flacon","Carton 500",500,0.30,200,5,"",mercure,"Soins corporels","Groupe Berto"
+"Savon de toilette 20g","SAV-001","pain","Carton 500",500,0.18,200,5,"",both,"Soins corporels","Metro"
+"Papier toilette (rouleau)","PAP-001","rouleau","Pack 96",96,0.22,200,3,"",both,"Hygiène","Metro"
+"Sac poubelle 10L","POB-001","sac","Carton 500",500,0.05,500,3,"",both,"Entretien","Metro"
+"Capsule café Nespresso","CAP-001","capsule","Boîte 50",50,0.45,100,5,"",mercure,"Minibar","Nespresso"
+"Tasse de thé (sachet individuel)","THE-001","sachet","Boîte 100",100,0.12,100,5,"",both,"Minibar","Lipton"
+"Stylo bille bleu","STY-001","pièce","Boîte 50",50,0.35,50,7,"",both,"Papeterie","Bureau Vallée"

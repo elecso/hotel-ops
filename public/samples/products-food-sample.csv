@@ -1,0 +1,9 @@
+name,sku,unit,packaging_desc,packaging_qty,price_excl_tax,min_stock,delivery_days,purchase_url,hotel_scope,category_name,supplier_name
+"Beurre doux 500g","BUT-001","plaque","Carton 20 plaques",20,2.10,10,2,"",both,"Produits laitiers","Metro"
+"Oeufs frais calibre M (boîte 12)","OEU-001","boîte","Plateau 30 boîtes",30,3.20,5,1,"",both,"Oeufs","Thiriet"
+"Farine T55 1kg","FAR-001","kg","Sac 25kg",25,0.85,5,3,"",both,"Épicerie sèche","Metro"
+"Sucre en poudre 1kg","SUC-001","kg","Sac 25kg",25,0.75,5,3,"",both,"Épicerie sèche","Metro"
+"Sel fin 1kg","SEL-001","kg","Sac 25kg",25,0.50,3,5,"",both,"Épicerie sèche","Metro"
+"Huile d'olive 1L","HUI-001","bouteille","Caisse 12",12,4.50,6,3,"",both,"Huiles & vinaigrettes","Metro"
+"Lait demi-écrémé 1L","LAI-001","bouteille","Pack 12",12,0.95,24,1,"",both,"Produits laitiers","Metro"
+"Canderel sucralose 100 sachets","CAN-001","boîte","Carton 12 boîtes",12,4.20,2,5,"",both,"Édulcorants","Metro"

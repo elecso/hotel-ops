@@ -1,11 +1,12 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { InventoryTable } from './InventoryTable'
+import { FoodProductList } from './FoodProductList'
 import { AddProductModal } from './AddProductModal'
 import { Button } from '@/components/ui/button'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import type { Product, StockMonth, Supplier, ProductCategory, RoomType, ProductType } from '@/lib/types'
 import { currentMonth, monthLabel } from '@/lib/utils'
 
@@ -20,6 +21,7 @@ interface Props {
   categories: ProductCategory[]
   roomTypes: RoomType[]
   isAdmin: boolean
+  salesOnly?: boolean
 }
 
 function generateMonthOptions() {
@@ -33,11 +35,14 @@ function generateMonthOptions() {
   return opts
 }
 
-export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, suppliers, categories, roomTypes, isAdmin }: Props) {
+export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, suppliers, categories, roomTypes, isAdmin, salesOnly = false }: Props) {
   const [month, setMonth] = useState(monthProp ?? currentMonth())
   const [rows, setRows] = useState<AnyRow[]>(rowsProp)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [csvError, setCsvError] = useState('')
+  const [csvSuccess, setCsvSuccess] = useState('')
+  const csvInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   const loadRows = useCallback(async (m: string) => {
@@ -51,15 +56,18 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
 
     const productIds = (products ?? []).map((p: Product) => p.id)
 
+    if (salesOnly) {
+      setRows((products ?? []).map((p: Product) => ({ product: p, stock: null, theoretical: 0 })))
+      setLoading(false)
+      return
+    }
+
     const { data: stockData } = await supabase
       .from('stock_months')
       .select('*')
       .eq('month', m)
       .in('product_id', productIds)
 
-    // Auto-populate opening_stock from previous month's theoretical stock.
-    // Include products with no entry OR entries where everything is still 0
-    // (so switching to a new month always seeds correctly from previous).
     const missingIds = productIds.filter((id: number) => {
       const existing = stockData?.find((s: StockMonth) => s.product_id === id)
       return !existing || (
@@ -118,11 +126,34 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
       return { product: p, stock, theoretical: (stock?.opening_stock ?? 0) + (stock?.bought ?? 0) - (stock?.used ?? 0) }
     }))
     setLoading(false)
-  }, [type, supabase])
+  }, [type, supabase, salesOnly])
 
   const handleMonthChange = (m: string) => {
     setMonth(m)
     loadRows(m)
+  }
+
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvError('')
+    setCsvSuccess('')
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', type)
+
+    try {
+      const res = await fetch('/api/products/import-csv', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur import')
+      setCsvSuccess(`${json.created} produit(s) créé(s), ${json.updated} mis à jour.`)
+      await loadRows(month)
+    } catch (err: unknown) {
+      setCsvError((err as Error).message)
+    }
+
+    if (csvInputRef.current) csvInputRef.current.value = ''
   }
 
   const monthOptions = generateMonthOptions()
@@ -131,28 +162,69 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
     <div className="space-y-4 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Select value={month} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map(o => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!salesOnly && (
+            <Select value={month} onValueChange={handleMonthChange}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {loading && <span className="text-sm text-[#B0A5B4]">Chargement…</span>}
         </div>
-        {isAdmin && (
-          <Button onClick={() => setShowModal(true)}>
-            <Plus size={16} /> Ajouter un produit
-          </Button>
-        )}
+
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                id="csv-import"
+                onChange={handleCsvImport}
+              />
+              <a
+                href={`/samples/products-${type === 'cleaning_fb' || type === 'cleaning_general' ? 'cleaning' : type === 'room' ? 'room' : type === 'beverage' ? 'beverage' : type === 'food' ? 'food' : 'room'}-sample.csv`}
+                download
+                className="text-[11px] text-[#B0A5B4] hover:text-[#602460] underline underline-offset-2 transition-colors"
+              >
+                Exemple CSV
+              </a>
+              <Button variant="secondary" onClick={() => csvInputRef.current?.click()}>
+                <Upload size={14} /> Import CSV
+              </Button>
+              <Button onClick={() => setShowModal(true)}>
+                <Plus size={16} /> Ajouter un produit
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-[#E5E2D8] overflow-hidden">
-        <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} />
-      </div>
+      {csvError && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{csvError}</div>
+      )}
+      {csvSuccess && (
+        <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">{csvSuccess}</div>
+      )}
+
+      {salesOnly ? (
+        <div className="bg-white rounded-xl border border-[#E5E2D8] overflow-hidden">
+          <div className="px-5 py-3 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
+            Alimentation — suivi des ventes uniquement via F&B Upload. Pas de gestion de stock direct.
+          </div>
+          <FoodProductList rows={rows} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} />
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-[#E5E2D8] overflow-hidden">
+          <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} type={type} />
+        </div>
+      )}
 
       <AddProductModal
         open={showModal}

@@ -44,13 +44,15 @@ export function ValidateRequisitionsClient({ requisitions: initial }: { requisit
       if (isNaN(qtyVal) || qtyVal <= 0) continue
       await supabase.from('requisition_lines').update({ qty_validated: qtyVal }).eq('id', line.id)
       if (line.product_id) {
+        // Ensure stock_months row exists
         await supabase.from('stock_months').upsert(
           { product_id: line.product_id, month, bought: 0, opening_stock: 0, used: 0 },
           { onConflict: 'product_id,month', ignoreDuplicates: true }
         )
-        const { data: sm } = await supabase.from('stock_months').select('bought')
+        // Decrease stock by incrementing "used"
+        const { data: sm } = await supabase.from('stock_months').select('used')
           .eq('product_id', line.product_id).eq('month', month).single()
-        await supabase.from('stock_months').update({ bought: (sm?.bought ?? 0) + qtyVal })
+        await supabase.from('stock_months').update({ used: (sm?.used ?? 0) + qtyVal })
           .eq('product_id', line.product_id).eq('month', month)
       }
     }
@@ -119,7 +121,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: { requisit
                   <TableHeader>
                     <TableRow>
                       <TableHead>Produit</TableHead><TableHead>Demandé</TableHead>
-                      <TableHead>Validé</TableHead><TableHead>Unité</TableHead>
+                      <TableHead>Qté validée</TableHead><TableHead>Unité</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

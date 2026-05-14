@@ -1,0 +1,9 @@
+name,sku,unit,packaging_desc,packaging_qty,price_excl_tax,min_stock,delivery_days,purchase_url,hotel_scope,category_name,supplier_name
+"Détergent multi-surfaces 1L","DET-001","bouteille","Carton 12",12,3.20,10,3,"",both,"Désinfectants","Ecolab"
+"Liquide vaisselle professionnel 5L","VAI-001","bidon","Carton 4",4,8.50,4,3,"",both,"Vaisselle","Ecolab"
+"Dégraissant four 750ml","DEG-001","bouteille","Carton 12",12,4.10,6,3,"",both,"Cuisine","Ecolab"
+"Chiffon microfibre (lot 10)","CHI-001","lot","Sachet 10",10,6.50,5,5,"",both,"Chiffons & éponges","Metro"
+"Sac poubelle 30L (rouleau 20)","POB-030","rouleau","Carton 20 rouleaux",20,2.80,20,3,"",both,"Consommables","Metro"
+"Gants ménage taille M (paire)","GAN-001","paire","Boîte 100",100,0.40,100,5,"",both,"Protections","Metro"
+"Produit WC détartrant 750ml","WC-001","bouteille","Carton 12",12,2.90,8,3,"",both,"Sanitaires","Ecolab"
+"Désodorisant spray 400ml","DES-001","spray","Pack 6",6,3.50,6,5,"",both,"Désodorisant","Neutral"

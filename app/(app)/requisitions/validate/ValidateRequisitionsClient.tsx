@@ -85,7 +85,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-sm text-[#4a4a6a]">Aucune réquisition en attente de validation.</p>
+          <p className="text-sm text-[#55596a]">Aucune réquisition en attente de validation.</p>
         </CardContent>
       </Card>
     )
@@ -104,14 +104,14 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
                   className="flex items-center gap-3 flex-1 text-left"
                 >
                   {isOpen
-                    ? <ChevronDown size={16} className="text-[#a855f7]" />
-                    : <ChevronRight size={16} className="text-[#4a4a6a]" />}
+                    ? <ChevronDown size={16} className="text-indigo-400" />
+                    : <ChevronRight size={16} className="text-[#55596a]" />}
                   <div>
                     <div className="flex items-center gap-2">
                       <CardTitle>{req.requester?.full_name ?? 'Utilisateur'}</CardTitle>
                       <Badge variant="pending">En attente</Badge>
                     </div>
-                    <p className="text-xs mt-0.5 text-[#4a4a6a]">
+                    <p className="text-xs mt-0.5 text-[#55596a]">
                       {formatDate(req.request_date)} — {TYPE_LABELS[req.type] ?? req.type} — {req.lines.length} ligne(s)
                     </p>
                   </div>
@@ -140,7 +140,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
               <CardContent className="p-0">
                 {req.notes && (
                   <div className="px-5 pb-2">
-                    <p className="text-xs italic text-[#4a4a6a]">Note: {req.notes}</p>
+                    <p className="text-xs italic text-[#55596a]">Note: {req.notes}</p>
                   </div>
                 )}
                 <Table>
@@ -156,7 +156,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
                     {req.lines.map(line => (
                       <TableRow key={line.id}>
                         <TableCell>{line.product?.name ?? '—'}</TableCell>
-                        <TableCell className="font-mono text-[#8080a8]">{line.qty_requested}</TableCell>
+                        <TableCell className="font-mono text-[#9095a8]">{line.qty_requested}</TableCell>
                         <TableCell>
                           <Input
                             type="number"
@@ -167,7 +167,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
                             step="0.1"
                           />
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-[#4a4a6a]">
+                        <TableCell className="font-mono text-xs text-[#55596a]">
                           {line.product?.unit ?? ''}
                         </TableCell>
                       </TableRow>

@@ -18,10 +18,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard', icon: <LayoutDashboard size={16} />, color: '#22d3ee' },
-  { label: 'Logbook',         href: '/logbook',   icon: <BookOpen size={16} />,        color: '#4ade80' },
+  { label: 'Tableau de bord', href: '/dashboard', icon: <LayoutDashboard size={16} />, color: '#818cf8' },
+  { label: 'Logbook',         href: '/logbook',   icon: <BookOpen size={16} />,        color: '#34d399' },
   {
-    label: 'Inventaire', icon: <Package size={16} />, color: '#a855f7', children: [
+    label: 'Inventaire', icon: <Package size={16} />, color: '#818cf8', children: [
       { label: 'Chambres',          href: '/inventory/rooms' },
       { label: 'Boissons',          href: '/inventory/beverages' },
       { label: 'Alimentation',      href: '/inventory/food' },
@@ -38,15 +38,15 @@ const navItems: NavItem[] = [
       { label: 'Coûts & Stats',      href: '/duty-roster/cost' },
     ],
   },
-  { label: 'Upload F&B', href: '/upload-fb', icon: <Upload size={16} />, color: '#f43f5e' },
+  { label: 'Upload F&B', href: '/upload-fb', icon: <Upload size={16} />, color: '#f87171' },
   {
-    label: 'Réquisitions', icon: <ClipboardList size={16} />, color: '#22d3ee', children: [
+    label: 'Réquisitions', icon: <ClipboardList size={16} />, color: '#7dd3fc', children: [
       { label: 'Créer',   href: '/requisitions' },
       { label: 'Valider', href: '/requisitions/validate' },
     ],
   },
-  { label: 'Factures',     href: '/invoices', icon: <FileText size={16} />, color: '#4ade80' },
-  { label: 'Utilisateurs', href: '/users',    icon: <Users size={16} />,    color: '#8080a8' },
+  { label: 'Factures',     href: '/invoices', icon: <FileText size={16} />,  color: '#34d399' },
+  { label: 'Utilisateurs', href: '/users',    icon: <Users size={16} />,     color: '#9095a8' },
 ]
 
 interface SidebarProps {
@@ -74,17 +74,17 @@ export function Sidebar({ user }: SidebarProps) {
 
   return (
     <aside
-      style={{ width: 240, background: '#0e0e24', minHeight: '100vh', borderRight: '1px solid #1e1e3c' }}
       className="flex flex-col flex-shrink-0"
+      style={{ width: 240, background: '#161920', minHeight: '100vh', borderRight: '1px solid #2a2d38' }}
     >
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-[#1e1e3c]">
-        <div className="text-white font-bold text-lg tracking-widest uppercase" style={{ color: '#a855f7' }}>MERCURE</div>
-        <div className="text-[11px] tracking-wide mt-0.5" style={{ color: '#4a4a6a' }}>Hotels Operations</div>
+      <div className="px-5 py-5 border-b border-[#2a2d38]">
+        <div className="text-[15px] font-bold tracking-widest uppercase text-indigo-400">MERCURE</div>
+        <div className="text-[11px] tracking-wide mt-0.5 text-[#55596a]">Hotels Operations</div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-4 overflow-y-auto">
+      <nav className="flex-1 px-2 py-3 overflow-y-auto">
         {navItems.map(item => {
           if (!item.children) {
             const active = item.href ? isActive(item.href) : false
@@ -92,14 +92,13 @@ export function Sidebar({ user }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href!}
-                className={`flex items-center gap-3 px-3 py-2 rounded-[6px] text-[13px] mb-0.5 transition-all ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-[13px] mb-0.5 transition-all ${
                   active
-                    ? 'bg-[#1e1050] text-white border-l-2 pl-[10px]'
-                    : 'text-[#8080a8] hover:bg-[#14142b] hover:text-[#e2e2f0]'
+                    ? 'bg-indigo-600/15 text-[#f0f1f5] border-l-2 pl-[10px] border-indigo-500'
+                    : 'text-[#9095a8] hover:bg-[#22252f] hover:text-[#f0f1f5]'
                 }`}
-                style={active ? { borderLeftColor: item.color ?? '#a855f7' } : {}}
               >
-                <span className="flex-shrink-0" style={{ color: active ? (item.color ?? '#a855f7') : undefined }}>{item.icon}</span>
+                <span className="flex-shrink-0" style={{ color: active ? (item.color ?? '#818cf8') : undefined }}>{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             )
@@ -112,15 +111,15 @@ export function Sidebar({ user }: SidebarProps) {
             <div key={item.label} className="mb-0.5">
               <button
                 onClick={() => toggleSection(item.label)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-[6px] text-[13px] transition-all ${
-                  anyChildActive ? 'text-[#e2e2f0]' : 'text-[#8080a8] hover:bg-[#14142b] hover:text-[#e2e2f0]'
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[13px] transition-all ${
+                  anyChildActive ? 'text-[#f0f1f5]' : 'text-[#9095a8] hover:bg-[#22252f] hover:text-[#f0f1f5]'
                 }`}
               >
-                <span className="flex-shrink-0" style={{ color: anyChildActive ? (item.color ?? '#a855f7') : undefined }}>{item.icon}</span>
+                <span className="flex-shrink-0" style={{ color: anyChildActive ? (item.color ?? '#818cf8') : undefined }}>{item.icon}</span>
                 <span className="flex-1 text-left">{item.label}</span>
                 {isOpen
-                  ? <ChevronDown size={12} style={{ color: '#4a4a6a' }} />
-                  : <ChevronRight size={12} style={{ color: '#4a4a6a' }} />}
+                  ? <ChevronDown size={12} className="text-[#55596a]" />
+                  : <ChevronRight size={12} className="text-[#55596a]" />}
               </button>
               {isOpen && (
                 <div className="ml-7 mt-0.5 flex flex-col gap-0.5">
@@ -130,12 +129,11 @@ export function Sidebar({ user }: SidebarProps) {
                       <Link
                         key={child.href}
                         href={child.href}
-                        className={`px-3 py-1.5 rounded-[6px] text-[12px] transition-all ${
+                        className={`px-3 py-1.5 rounded-md text-[12px] transition-all ${
                           active
-                            ? 'bg-[#1e1050] text-white border-l-2 pl-[10px]'
-                            : 'text-[#5a5a78] hover:bg-[#14142b] hover:text-[#e2e2f0]'
+                            ? 'bg-indigo-600/15 text-[#f0f1f5] border-l-2 pl-[10px] border-indigo-500'
+                            : 'text-[#55596a] hover:bg-[#22252f] hover:text-[#f0f1f5]'
                         }`}
-                        style={active ? { borderLeftColor: item.color ?? '#a855f7' } : {}}
                       >
                         {child.label}
                       </Link>
@@ -149,18 +147,18 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* User footer */}
-      <div className="px-4 py-4 border-t border-[#1e1e3c]">
+      <div className="px-4 py-4 border-t border-[#2a2d38]">
         {user && (
           <div className="mb-3">
-            <p className="text-[#e2e2f0] text-[13px] font-medium truncate">{user.full_name}</p>
-            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#1e1050] text-[#a855f7] font-semibold uppercase tracking-wide border border-[#a855f7]/30">
+            <p className="text-[#f0f1f5] text-[13px] font-medium truncate">{user.full_name}</p>
+            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-indigo-600/15 text-indigo-400 font-semibold uppercase tracking-wide border border-indigo-500/25">
               {user.role}
             </span>
           </div>
         )}
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 text-[#4a4a6a] hover:text-[#f87171] text-[13px] transition-colors"
+          className="flex items-center gap-2 text-[#55596a] hover:text-[#f87171] text-[13px] transition-colors"
         >
           <LogOut size={14} />
           <span>Déconnexion</span>

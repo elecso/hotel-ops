@@ -70,7 +70,6 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  // Inline validation state
   const [expanded, setExpanded] = useState<number[]>([])
   const [lineQty, setLineQty] = useState<Record<number, string>>({})
   const [processing, setProcessing] = useState<number | null>(null)
@@ -172,16 +171,17 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
         </Link>
       )}
 
-      {/* Create form */}
       <Card>
         <CardHeader><CardTitle>Nouvelle réquisition</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {success && (
-            <div className="text-sm text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/30 rounded px-3 py-2">
+            <div className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-md px-3 py-2">
               Réquisition soumise avec succès.
             </div>
           )}
-          {error && <div className="text-sm text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/30 rounded px-3 py-2">{error}</div>}
+          {error && (
+            <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/25 rounded-md px-3 py-2">{error}</div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -210,7 +210,7 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                     <select
                       value={line.product_id}
                       onChange={e => updateLine(i, 'product_id', e.target.value)}
-                      className="flex-1 h-9 rounded-[6px] border border-[#252548] bg-[#0e0e24] px-3 text-sm text-[#e2e2f0] focus:outline-none focus:ring-2 focus:ring-[#a855f7]"
+                      className="flex-1 h-9 rounded-md border border-[#2a2d38] bg-[#13151c] px-3 text-sm text-[#f0f1f5] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
                     >
                       <option value="">Sélectionner un produit…</option>
                       {filteredProducts.map(p => (
@@ -227,20 +227,20 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                       step="0.1"
                     />
                     {lines.length > 1 && (
-                      <button onClick={() => removeLine(i)} className="text-[#f87171] hover:text-[#ef4444]">
+                      <button onClick={() => removeLine(i)} className="text-red-400 hover:text-red-300">
                         <Trash2 size={14} />
                       </button>
                     )}
                   </div>
                   {selectedProduct && (
-                    <div className="flex items-center gap-3 pl-1 text-[11px] text-[#4a4a6a]">
+                    <div className="flex items-center gap-3 pl-1 text-[11px] text-[#55596a]">
                       {selectedProduct.price_excl_tax != null && (
-                        <span>Prix: <span className="font-semibold text-[#22d3ee]">{formatCurrency(selectedProduct.price_excl_tax)}</span></span>
+                        <span>Prix: <span className="font-semibold text-sky-400">{formatCurrency(selectedProduct.price_excl_tax)}</span></span>
                       )}
                       {selectedProduct.packaging_desc && (
-                        <span>Cond.: <span className="font-semibold text-[#e2e2f0]">{selectedProduct.packaging_desc}</span></span>
+                        <span>Cond.: <span className="font-semibold text-[#f0f1f5]">{selectedProduct.packaging_desc}</span></span>
                       )}
-                      <span>Unité: <span className="font-semibold text-[#e2e2f0]">{selectedProduct.unit}</span></span>
+                      <span>Unité: <span className="font-semibold text-[#f0f1f5]">{selectedProduct.unit}</span></span>
                     </div>
                   )}
                 </div>
@@ -264,14 +264,13 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
         </CardContent>
       </Card>
 
-      {/* History with inline validation for admin/manager */}
       <Card>
         <CardHeader><CardTitle>Mes réquisitions récentes</CardTitle></CardHeader>
         <CardContent className="p-0">
           {requisitions.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-[#4a4a6a]">Aucune réquisition.</p>
+            <p className="px-5 py-4 text-sm text-[#55596a]">Aucune réquisition.</p>
           ) : (
-            <div className="divide-y divide-[#252548]">
+            <div className="divide-y divide-[#2a2d38]">
               {requisitions.map(r => {
                 const isPending = r.status === 'pending'
                 const isOpen = expanded.includes(r.id)
@@ -280,24 +279,24 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                 return (
                   <div key={r.id}>
                     <div
-                      className={`flex items-center justify-between px-5 py-3 ${canExpand ? 'cursor-pointer hover:bg-[#1e1e38] transition-colors' : ''}`}
+                      className={`flex items-center justify-between px-5 py-3 ${canExpand ? 'cursor-pointer hover:bg-[#22252f] transition-colors' : ''}`}
                       onClick={() => canExpand && toggleExpand(r.id)}
                     >
                       <div className="flex items-center gap-3">
                         {canExpand && (
                           isOpen
-                            ? <ChevronDown size={14} className="text-[#a855f7]" />
-                            : <ChevronRight size={14} className="text-[#4a4a6a]" />
+                            ? <ChevronDown size={14} className="text-indigo-400" />
+                            : <ChevronRight size={14} className="text-[#55596a]" />
                         )}
                         <div>
                           <div className="flex items-center gap-2 text-sm">
-                            <span className="text-[#e2e2f0] font-medium">{formatDate(r.request_date)}</span>
-                            <span className="text-[#4a4a6a]">·</span>
-                            <span className="text-[#8080a8]">{TYPE_LABELS[r.type] ?? r.type}</span>
-                            <span className="text-[#4a4a6a]">·</span>
-                            <span className="font-mono text-[#4a4a6a] text-xs">{r.lines?.length ?? 0} ligne(s)</span>
+                            <span className="text-[#f0f1f5] font-medium">{formatDate(r.request_date)}</span>
+                            <span className="text-[#55596a]">·</span>
+                            <span className="text-[#9095a8]">{TYPE_LABELS[r.type] ?? r.type}</span>
+                            <span className="text-[#55596a]">·</span>
+                            <span className="font-mono text-[#55596a] text-xs">{r.lines?.length ?? 0} ligne(s)</span>
                           </div>
-                          {r.notes && <p className="text-[11px] text-[#4a4a6a] mt-0.5 italic">{r.notes}</p>}
+                          {r.notes && <p className="text-[11px] text-[#55596a] mt-0.5 italic">{r.notes}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -305,14 +304,13 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                           {r.status === 'pending' ? 'En attente' : r.status === 'validated' ? 'Validée' : 'Rejetée'}
                         </Badge>
                         {canExpand && isPending && (
-                          <span className="text-[11px] text-[#4a4a6a]">cliquez pour valider</span>
+                          <span className="text-[11px] text-[#55596a]">cliquez pour valider</span>
                         )}
                       </div>
                     </div>
 
-                    {/* Inline validation panel */}
                     {isOpen && isPending && (
-                      <div className="border-t border-[#252548] bg-[#0e0e24]">
+                      <div className="border-t border-[#2a2d38] bg-[#161920]">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -326,7 +324,7 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                             {r.lines.map(line => (
                               <TableRow key={line.id}>
                                 <TableCell>{line.product?.name ?? '—'}</TableCell>
-                                <TableCell className="font-mono text-[#8080a8]">{line.qty_requested}</TableCell>
+                                <TableCell className="font-mono text-[#9095a8]">{line.qty_requested}</TableCell>
                                 <TableCell>
                                   <Input
                                     type="number"
@@ -337,7 +335,7 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                                     step="0.1"
                                   />
                                 </TableCell>
-                                <TableCell className="font-mono text-xs text-[#4a4a6a]">
+                                <TableCell className="font-mono text-xs text-[#55596a]">
                                   {line.product?.unit ?? ''}
                                 </TableCell>
                               </TableRow>

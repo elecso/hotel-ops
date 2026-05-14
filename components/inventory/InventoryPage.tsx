@@ -127,7 +127,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
               ))}
             </SelectContent>
           </Select>
-          {loading && <span className="text-sm text-[#4a4a6a]">Chargement…</span>}
+          {loading && <span className="text-sm text-[#55596a]">Chargement…</span>}
         </div>
         {isAdmin && (
           <Button onClick={() => setShowModal(true)}>
@@ -136,7 +136,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
         )}
       </div>
 
-      <div className="bg-[#14142b] rounded-[10px] border border-[#252548] overflow-hidden">
+      <div className="bg-[#1c1e26] rounded-xl border border-[#2a2d38] overflow-hidden">
         <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} />
       </div>
 

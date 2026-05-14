@@ -4,19 +4,19 @@ import { cn } from '@/lib/utils'
 type BadgeVariant = 'mercure' | 'ibis' | 'pending' | 'validated' | 'rejected' | 'meeting' | 'banqueting' | 'event' | 'admin' | 'manager' | 'staff' | 'readonly' | 'default'
 
 const variantClasses: Record<BadgeVariant, string> = {
-  mercure:    'bg-[#a855f7] text-white',
-  ibis:       'bg-[#f43f5e] text-white',
-  pending:    'bg-[#fbbf24]/15 text-[#fbbf24] border border-[#fbbf24]/30',
-  validated:  'bg-[#4ade80]/15 text-[#4ade80] border border-[#4ade80]/30',
-  rejected:   'bg-[#f87171]/15 text-[#f87171] border border-[#f87171]/30',
-  meeting:    'bg-[#22d3ee]/15 text-[#22d3ee] border border-[#22d3ee]/30',
-  banqueting: 'bg-[#fb923c]/15 text-[#fb923c] border border-[#fb923c]/30',
-  event:      'bg-[#f43f5e]/15 text-[#f43f5e] border border-[#f43f5e]/30',
-  admin:      'bg-[#a855f7] text-white',
-  manager:    'bg-[#22d3ee]/15 text-[#22d3ee] border border-[#22d3ee]/30',
-  staff:      'bg-[#252548] text-[#8080a8]',
-  readonly:   'bg-[#1a1a35] text-[#4a4a6a]',
-  default:    'bg-[#252548] text-[#8080a8]',
+  mercure:    'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+  ibis:       'bg-rose-500/20 text-rose-300 border border-rose-500/30',
+  pending:    'bg-amber-500/15 text-amber-400 border border-amber-500/25',
+  validated:  'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
+  rejected:   'bg-red-500/15 text-red-400 border border-red-500/25',
+  meeting:    'bg-sky-500/15 text-sky-400 border border-sky-500/25',
+  banqueting: 'bg-violet-500/15 text-violet-400 border border-violet-500/25',
+  event:      'bg-orange-500/15 text-orange-400 border border-orange-500/25',
+  admin:      'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+  manager:    'bg-sky-500/15 text-sky-400 border border-sky-500/25',
+  staff:      'bg-white/5 text-[#9095a8] border border-white/10',
+  readonly:   'bg-white/5 text-[#55596a] border border-white/8',
+  default:    'bg-white/5 text-[#9095a8] border border-white/10',
 }
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -26,7 +26,11 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 export function Badge({ variant = 'default', className, children, ...props }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${variantClasses[variant]} ${className ?? ''}`}
+      className={cn(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium tracking-wide',
+        variantClasses[variant],
+        className
+      )}
       {...props}
     >
       {children}

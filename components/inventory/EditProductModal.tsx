@@ -151,7 +151,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
                 <button
                   type="button"
                   onClick={() => setShowNewSupplier(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
                   title="Nouveau fournisseur"
                 >+</button>
               </div>
@@ -188,7 +188,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
                 <button
                   type="button"
                   onClick={() => setShowNewCategory(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
                   title="Nouvelle catégorie"
                 >+</button>
               </div>

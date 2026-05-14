@@ -51,7 +51,7 @@ function StockCell({
     setEditing(false)
   }
 
-  if (!isAdmin) return <span className="font-mono text-sm text-[#e2e2f0]">{value}</span>
+  if (!isAdmin) return <span className="font-mono text-sm text-[#f0f1f5]">{value}</span>
 
   if (editing) {
     return (
@@ -65,8 +65,8 @@ function StockCell({
           type="number"
           min="0"
         />
-        <button onClick={save} className="text-[#4ade80] hover:text-[#22c55e]"><Check size={14} /></button>
-        <button onClick={() => setEditing(false)} className="text-[#f87171] hover:text-[#ef4444]"><X size={14} /></button>
+        <button onClick={save} className="text-emerald-400 hover:text-emerald-300"><Check size={14} /></button>
+        <button onClick={() => setEditing(false)} className="text-red-400 hover:text-red-300"><X size={14} /></button>
       </div>
     )
   }
@@ -74,7 +74,7 @@ function StockCell({
   return (
     <button
       onClick={() => { setDraft(String(value)); setEditing(true) }}
-      className="font-mono text-sm hover:underline flex items-center gap-1 text-left text-[#a855f7]"
+      className="font-mono text-sm hover:underline flex items-center gap-1 text-left text-indigo-400 hover:text-indigo-300"
     >
       {value}
       <Edit2 size={10} className="opacity-50" />
@@ -98,7 +98,7 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
 
   if (localRows.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-[#4a4a6a]">
+      <div className="py-12 text-center text-sm text-[#55596a]">
         Aucun produit dans cette catégorie.
       </div>
     )
@@ -128,22 +128,22 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
             return (
               <TableRow
                 key={product.id}
-                className={isLow ? 'border-l-2 border-l-[#fbbf24] bg-[#fbbf24]/5' : ''}
+                className={isLow ? 'border-l-2 border-l-amber-500 bg-amber-500/5' : ''}
               >
                 <TableCell>
                   <div>
-                    <p className="font-medium text-sm text-[#e2e2f0]">{product.name}</p>
-                    {product.sku && <p className="text-[11px] font-mono text-[#4a4a6a]">{product.sku}</p>}
+                    <p className="font-medium text-sm text-[#f0f1f5]">{product.name}</p>
+                    {product.sku && <p className="text-[11px] font-mono text-[#55596a]">{product.sku}</p>}
                     {isLow && <Badge variant="pending" className="mt-1">Stock bas</Badge>}
                   </div>
                 </TableCell>
-                <TableCell className="text-sm text-[#8080a8]">{product.supplier?.name ?? '—'}</TableCell>
-                <TableCell className="text-sm font-mono text-[#8080a8]">{product.unit ?? '—'}</TableCell>
-                <TableCell className="text-sm text-[#8080a8]">
+                <TableCell className="text-sm text-[#9095a8]">{product.supplier?.name ?? '—'}</TableCell>
+                <TableCell className="text-sm font-mono text-[#9095a8]">{product.unit ?? '—'}</TableCell>
+                <TableCell className="text-sm text-[#9095a8]">
                   {product.packaging_desc ?? ''}
                   {product.packaging_qty ? ` (${product.packaging_qty})` : ''}
                 </TableCell>
-                <TableCell className="text-sm font-mono text-[#22d3ee]">
+                <TableCell className="text-sm font-mono text-sky-400">
                   {product.price_excl_tax ? formatCurrency(product.price_excl_tax) : '—'}
                 </TableCell>
                 <TableCell>
@@ -156,7 +156,7 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
                     onSaved={v => updateField(product.id, 'opening_stock', v)}
                   />
                 </TableCell>
-                <TableCell className="font-mono text-sm text-[#4ade80]">{stock?.bought ?? 0}</TableCell>
+                <TableCell className="font-mono text-sm text-emerald-400">{stock?.bought ?? 0}</TableCell>
                 <TableCell>
                   <StockCell
                     value={stock?.used ?? 0}
@@ -168,17 +168,17 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
                   />
                 </TableCell>
                 <TableCell>
-                  <span className={`font-mono text-sm font-bold ${isLow ? 'text-[#fbbf24]' : 'text-[#a855f7]'}`}>
+                  <span className={`font-mono text-sm font-bold ${isLow ? 'text-amber-400' : 'text-indigo-400'}`}>
                     {theoretical.toFixed(2)}
                   </span>
                 </TableCell>
-                <TableCell className="font-mono text-sm text-[#8080a8]">{product.min_stock ?? '—'}</TableCell>
+                <TableCell className="font-mono text-sm text-[#9095a8]">{product.min_stock ?? '—'}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
                     {isAdmin && (
                       <button
                         onClick={() => setEditingProduct(product)}
-                        className="text-[#a855f7] hover:text-[#c084fc] p-1 rounded hover:bg-[#1e1050] transition-colors"
+                        className="text-[#9095a8] hover:text-indigo-400 p-1 rounded hover:bg-indigo-600/10 transition-colors"
                         title="Modifier le produit"
                       >
                         <Pencil size={14} />
@@ -189,7 +189,7 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
                         href={product.purchase_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#22d3ee] hover:text-[#67e8f9] p-1"
+                        className="text-[#9095a8] hover:text-sky-400 p-1 transition-colors"
                       >
                         <ExternalLink size={14} />
                       </a>

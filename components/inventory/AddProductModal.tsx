@@ -170,7 +170,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 <button
                   type="button"
                   onClick={() => setShowNewSupplier(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
                   title="Nouveau fournisseur"
                 >+</button>
               </div>
@@ -204,7 +204,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 <button
                   type="button"
                   onClick={() => setShowNewCategory(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
                   title="Nouvelle catégorie"
                 >+</button>
               </div>
@@ -276,8 +276,8 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                     onClick={() => toggleRoomType(rt.id)}
                     className={`text-xs px-3 py-1 rounded-full border transition-colors ${
                       selectedRoomTypes.includes(rt.id)
-                        ? 'bg-[#a855f7] text-white border-[#a855f7]'
-                        : 'bg-[#0e0e24] text-[#a855f7] border-[#252548] hover:border-[#a855f7]'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-[#13151c] text-indigo-400 border-[#2a2d38] hover:border-indigo-500/50'
                     }`}
                   >
                     {rt.code} — {rt.label}
@@ -296,7 +296,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 </Button>
               </div>
               {subProducts.map((sp, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded border border-[#252548] bg-[#0e0e24]">
+                <div key={i} className="flex items-center gap-2 p-2 rounded-md border border-[#2a2d38] bg-[#13151c]">
                   <Input placeholder="Nom (ex: Verre 25cl)" value={sp.name} onChange={e => updateSubProduct(i, 'name', e.target.value)} className="flex-1" />
                   <Input placeholder="Volume (cl)" value={sp.volume_cl} onChange={e => updateSubProduct(i, 'volume_cl', e.target.value)} type="number" className="w-24" />
                   <Input placeholder="Facteur" value={sp.decrement_factor} onChange={e => updateSubProduct(i, 'decrement_factor', e.target.value)} type="number" step="0.01" className="w-24" />

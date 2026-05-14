@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
         currentStock,
         minStock: p.min_stock,
         unit: p.unit ?? '',
-        supplierName: (p.supplier as { name: string } | null)?.name ?? '',
+        supplierName: (p.supplier as unknown as { name: string } | null)?.name ?? '',
         purchaseUrl: p.purchase_url ?? '',
       })
     }

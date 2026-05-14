@@ -23,7 +23,7 @@ export default async function CostRhPage() {
   ])
 
   type RosterRow = { staff: { full_name: string; hourly_rate: number; department: string } | null; date: string; hours: number }
-  const rows = rosters as RosterRow[] ?? []
+  const rows = (rosters as unknown as RosterRow[]) ?? []
 
   const totalHours = rows.reduce((s, r) => s + (r.hours ?? 0), 0)
   const totalCost = rows.reduce((s, r) => {

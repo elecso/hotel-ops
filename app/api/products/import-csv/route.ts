@@ -37,7 +37,7 @@ function parseCsv(text: string): CsvRow[] {
 
     const row: Record<string, string> = {}
     headers.forEach((h, i) => { row[h] = values[i] ?? '' })
-    return row as CsvRow
+    return row as unknown as CsvRow
   }).filter(r => r.name)
 }
 

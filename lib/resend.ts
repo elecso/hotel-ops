@@ -36,6 +36,90 @@ export interface StockAlertParams {
   unit: string
 }
 
+export interface LowStockProduct {
+  name: string
+  currentStock: number
+  minStock: number
+  unit: string
+  supplierName: string
+  purchaseUrl: string
+}
+
+export async function sendLowStockDigest(products: LowStockProduct[]) {
+  if (products.length === 0) return
+
+  const today = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  const rows = products.map(p => `
+    <tr>
+      <td style="padding:8px 12px;font-weight:600;color:#3D1640;">${p.name}</td>
+      <td style="padding:8px 12px;color:#E8003D;font-weight:700;">${p.currentStock} ${p.unit}</td>
+      <td style="padding:8px 12px;">${p.minStock} ${p.unit}</td>
+      <td style="padding:8px 12px;color:#7B6B80;">${p.supplierName || '—'}</td>
+      <td style="padding:8px 12px;">
+        ${p.purchaseUrl ? `<a href="${p.purchaseUrl}" style="color:#602460;font-weight:600;text-decoration:underline;">Commander</a>` : '—'}
+      </td>
+    </tr>
+  `).join('')
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0;background:#F4F2ED;font-family:'Inter','Helvetica Neue',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F2ED;padding:32px 0;">
+    <tr><td align="center">
+      <table width="640" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;border:1px solid #C5C0B1;">
+        <tr>
+          <td style="background:#602460;padding:20px 32px;">
+            <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:3px;">MERCURE HOTELS</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px 8px;">
+            <div style="background:#FEF3C7;border-left:4px solid #D97706;padding:12px 16px;border-radius:4px;font-size:14px;color:#92400E;">
+              ⚠️ <strong>${products.length} produit(s) chambre en dessous du stock minimum</strong> — Action requise
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 24px;">
+            <p style="color:#7B6B80;font-size:13px;margin:0 0 16px;">${today}</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #C5C0B1;border-radius:6px;font-size:13px;overflow:hidden;">
+              <thead>
+                <tr style="background:#DFDBCF;">
+                  <th style="padding:8px 12px;text-align:left;color:#3D1640;font-weight:600;">Produit</th>
+                  <th style="padding:8px 12px;text-align:left;color:#3D1640;font-weight:600;">Stock actuel</th>
+                  <th style="padding:8px 12px;text-align:left;color:#3D1640;font-weight:600;">Seuil min.</th>
+                  <th style="padding:8px 12px;text-align:left;color:#3D1640;font-weight:600;">Fournisseur</th>
+                  <th style="padding:8px 12px;text-align:left;color:#3D1640;font-weight:600;">Lien</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#DFDBCF;padding:16px 32px;text-align:center;">
+            <p style="color:#3D1640;font-size:12px;margin:0;">Mercure Hotels — Alerte stock automatique</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+
+  return getResend().emails.send({
+    from: `Mercure Operations <${process.env.RESEND_FROM_EMAIL ?? 'operations@mercure-hotels.com'}>`,
+    to: [process.env.ALERT_EMAIL_TO ?? 'gm@mercure-hotels.com'],
+    subject: `⚠️ Stock bas — ${products.length} produit(s) chambre à commander`,
+    html,
+  })
+}
+
 export async function sendStockAlert(params: StockAlertParams) {
   const { productName, currentStock, minStock, supplierName, deliveryDays, purchaseUrl, unit } = params
 

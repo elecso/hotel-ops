@@ -34,6 +34,7 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
   const supabase = createClient()
 
   const today = isoDate(new Date())
+  const [filterService, setFilterService] = useState('')
 
   const getRosterValue = (staffId: number, date: string, shift: 'morning' | 'afternoon') =>
     roster.find(r => r.staff_id === staffId && r.day_date === date && r.shift === shift)?.value ?? ''
@@ -44,6 +45,7 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
     )
 
   const services = [...new Set(initialStaff.map(s => s.service))].filter(Boolean)
+  const filteredServices = filterService ? services.filter(s => s === filterService) : services
   const staffByService = (service: string) => initialStaff.filter(s => s.service === service)
 
   const prevWeek = () => {
@@ -61,7 +63,13 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
     const file = e.target.files?.[0]
     if (!file) return
     setImporting(true)
-    const text = await file.text()
+    const buffer = await file.arrayBuffer()
+    let text: string
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+    } catch {
+      text = new TextDecoder('windows-1252').decode(buffer)
+    }
     await parseAndImportCsv(text)
     setImporting(false)
   }
@@ -127,13 +135,23 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="icon" onClick={prevWeek}><ChevronLeft size={16} /></Button>
           <span className="text-sm font-medium px-2" style={{ color: '#3D1640' }}>{weekLabel}</span>
           <Button variant="outline" size="icon" onClick={nextWeek}><ChevronRight size={16} /></Button>
           <Button variant="secondary" size="sm" onClick={() => router.push(`/duty-roster?week=${isoDate(getWeekStart())}`)}>
             Semaine actuelle
           </Button>
+          {services.length > 0 && (
+            <select
+              value={filterService}
+              onChange={e => setFilterService(e.target.value)}
+              className="h-9 rounded-md border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#602460]/30"
+            >
+              <option value="">Tous les départements</option>
+              {services.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
         </div>
         {isManager && (
           <div className="flex items-center gap-2">
@@ -167,7 +185,7 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
             </tr>
           </thead>
           <tbody>
-            {services.map(service => {
+            {filteredServices.map(service => {
               const serviceStaff = staffByService(service)
               const isCollapsed = collapsedServices.includes(service)
               return (
@@ -236,7 +254,7 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
               )
             })}
 
-            {services.length === 0 && (
+            {filteredServices.length === 0 && (
               <tr>
                 <td colSpan={9} className="text-center py-10 text-sm" style={{ color: '#C5C0B1' }}>
                   Aucun planning pour cette semaine. Importez un fichier CSV.

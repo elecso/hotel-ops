@@ -571,3 +571,13 @@ create policy "admin_write_purchase_orders"
   on purchase_orders for all using (get_my_role() in ('admin','manager'));
 create policy "admin_write_purchase_order_lines"
   on purchase_order_lines for all using (get_my_role() in ('admin','manager'));
+
+-- Remove the hard-coded checked_by CHECK constraint so any staff name can be stored
+ALTER TABLE toilet_checks DROP CONSTRAINT IF EXISTS toilet_checks_checked_by_check;
+
+-- Add KPI fields to daily_stats for the Statistique page
+ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS rps              numeric(4,2);
+ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS all_stars_count  int;
+
+-- Add occupancy target per hotel (default 80%)
+ALTER TABLE hotels ADD COLUMN IF NOT EXISTS occupancy_target numeric(5,2) DEFAULT 80;

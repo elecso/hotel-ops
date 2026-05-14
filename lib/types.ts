@@ -50,6 +50,8 @@ export interface DailyStat {
   room_service_revenue: number
   banquet_lunch_covers: number
   banquet_dinner_covers: number
+  rps: number | null
+  all_stars_count: number | null
 }
 
 export interface FbDailySale {
@@ -241,7 +243,7 @@ export interface ToiletCheck {
   id: number
   check_date: string
   toilet_id: 1 | 2 | 3
-  checked_by: 'Fadila' | 'HK' | 'other'
+  checked_by: string
   check_time: string
   validated: boolean
 }

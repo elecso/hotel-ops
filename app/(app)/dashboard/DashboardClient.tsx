@@ -113,42 +113,36 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
         <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
           Chiffres clés du jour
         </h3>
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <MetricCard
             hotel="mercure"
             label="Mercure Occ."
             value={mercureToday ? formatPct(mercureToday.occupancy_pct) : '—'}
-            compact
           />
           <MetricCard
             hotel="mercure"
-            label="Mercure Arr./Dép."
+            label="Arr. / Dép. Mercure"
             value={mercureToday ? `${mercureToday.arrivals} / ${mercureToday.departures}` : '—'}
-            compact
           />
           <MetricCard
             hotel="ibis"
             label="Ibis Occ."
             value={ibisToday ? formatPct(ibisToday.occupancy_pct) : '—'}
-            compact
           />
           <MetricCard
             hotel="ibis"
-            label="Ibis Arr./Dép."
+            label="Arr. / Dép. Ibis"
             value={ibisToday ? `${ibisToday.arrivals} / ${ibisToday.departures}` : '—'}
-            compact
           />
           <MetricCard
-            hotel="mercure"
+            color="green"
             label="PDJ Mercure"
             value={bfMercure}
-            compact
           />
           <MetricCard
-            hotel="ibis"
+            color="amber"
             label="PDJ Ibis"
             value={bfIbis}
-            compact
           />
         </div>
       </div>
@@ -297,44 +291,35 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
           <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
             Résultats J-1 — {formatDate(new Date(new Date(selectedDate).getTime() - 86400000))}
           </h3>
-          <div className="grid grid-cols-2 gap-2">
-            <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} compact />
-            <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} compact />
+          <div className="grid grid-cols-2 gap-3">
+            <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} />
+            <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} />
             <MetricCard hotel="mercure" label="Arr. / Dép. Mercure"
               value={mercureYesterday ? `${mercureYesterday.arrivals ?? 0} / ${mercureYesterday.departures ?? 0}` : '—'}
-              compact
             />
             <MetricCard hotel="ibis" label="Arr. / Dép. Ibis"
               value={ibisYesterday ? `${ibisYesterday.arrivals ?? 0} / ${ibisYesterday.departures ?? 0}` : '—'}
-              compact
             />
-            <MetricCard hotel="neutral" label="PDJ Total"
+            <MetricCard color="green" label="PDJ Total"
               value={(mercureYesterday?.breakfast_covers ?? 0) + (ibisYesterday?.breakfast_covers ?? 0)}
-              compact
             />
-            <MetricCard hotel="neutral" label="Déjeuner"
+            <MetricCard color="sky" label="Déjeuner"
               value={mercureYesterday?.lunch_covers ?? '—'}
-              compact
             />
-            <MetricCard hotel="mercure" label="Dîner Mercure"
+            <MetricCard color="purple" label="Dîner Mercure"
               value={mercureYesterday?.dinner_mercure_covers ?? '—'}
-              compact
             />
-            <MetricCard hotel="ibis" label="Dîner Ibis"
+            <MetricCard color="rose" label="Dîner Ibis"
               value={ibisYesterday?.dinner_ibis_covers ?? '—'}
-              compact
             />
-            <MetricCard hotel="neutral" label="Banq. Déjeuner"
+            <MetricCard color="amber" label="Banq. Déjeuner"
               value={mercureYesterday?.banquet_lunch_covers ?? '—'}
-              compact
             />
-            <MetricCard hotel="neutral" label="Banq. Dîner"
+            <MetricCard color="amber" label="Banq. Dîner"
               value={mercureYesterday?.banquet_dinner_covers ?? '—'}
-              compact
             />
-            <MetricCard hotel="neutral" label="Room Service"
+            <MetricCard color="sky" label="Room Service"
               value={mercureYesterday?.room_service_revenue ? `${mercureYesterday.room_service_revenue.toFixed(0)} €` : '—'}
-              compact
             />
           </div>
         </div>

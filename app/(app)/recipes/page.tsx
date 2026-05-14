@@ -19,7 +19,7 @@ export default async function RecipesPage() {
     supabase
       .from('products')
       .select('id, name, unit')
-      .eq('type', 'food')
+      .eq('type', 'ingredient')
       .eq('is_active', true)
       .order('name'),
   ])

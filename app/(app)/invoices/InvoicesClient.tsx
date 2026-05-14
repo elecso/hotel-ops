@@ -53,6 +53,7 @@ const STATUS_VARIANT: Record<string, 'pending' | 'validated' | 'default'> = {
 export function InvoicesClient({ invoices: initial, suppliers, products, confirmedMappings, userId, isManager }: Props) {
   const [invoices, setInvoices] = useState(initial)
   const [file, setFile] = useState<File | null>(null)
+  const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [supplierId, setSupplierId] = useState('')
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -92,6 +93,7 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
 
       setParsedLines(mapped)
       setPendingInvoiceId(invoiceId)
+      if (file) setFileUrl(URL.createObjectURL(file))
     } catch (e: unknown) {
       setError((e as Error).message)
     } finally {
@@ -153,6 +155,7 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
     setParsedLines(null)
     setPendingInvoiceId(null)
     setFile(null)
+    if (fileUrl) { URL.revokeObjectURL(fileUrl); setFileUrl(null) }
     setSaving(false)
   }
 
@@ -197,65 +200,73 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
 
       {/* Parsed lines mapping */}
       {parsedLines && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Mapping des lignes de facture</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description brute</TableHead>
-                    <TableHead>Produit mappé</TableHead>
-                    <TableHead>Qté</TableHead>
-                    <TableHead>PU (€)</TableHead>
-                    <TableHead>Total (€)</TableHead>
-                    <TableHead>Confiance</TableHead>
-                    <TableHead>Statut</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedLines.map((line, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-mono text-xs max-w-[160px] truncate">{line.raw_description}</TableCell>
-                      <TableCell>
-                        <select
-                          value={line.product_id ?? ''}
-                          onChange={e => updateLine(i, e.target.value ? parseInt(e.target.value) : null)}
-                          className="w-full h-8 rounded border border-[#C5C0B1] bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
-                        >
-                          <option value="">— Non mappé —</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{line.qty}</TableCell>
-                      <TableCell className="font-mono text-xs">{line.unit_price?.toFixed(2)}</TableCell>
-                      <TableCell className="font-mono text-xs">{line.total?.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {line.ai_confidence != null && (
-                          <span className="font-mono text-xs" style={{ color: line.ai_confidence > 0.8 ? '#16a34a' : '#C5C0B1' }}>
-                            {(line.ai_confidence * 100).toFixed(0)}%
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {line.ai_matched
-                          ? <Badge variant="validated">Auto</Badge>
-                          : <Badge variant="pending">Manuel</Badge>}
-                      </TableCell>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Left: mapping table */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Mapping des lignes de facture</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Produit</TableHead>
+                      <TableHead>Qté</TableHead>
+                      <TableHead>PU €</TableHead>
+                      <TableHead>Total €</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => { setParsedLines(null); setPendingInvoiceId(null) }}>← Annuler</Button>
-            <Button onClick={handleValidate} disabled={saving}>
-              {saving ? 'Validation…' : 'Valider la facture →'}
-            </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedLines.map((line, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-mono text-xs max-w-[140px] truncate">{line.raw_description}</TableCell>
+                        <TableCell>
+                          <select
+                            value={line.product_id ?? ''}
+                            onChange={e => updateLine(i, e.target.value ? parseInt(e.target.value) : null)}
+                            className="w-full h-8 rounded border border-[#C5C0B1] bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
+                          >
+                            <option value="">— Non mappé —</option>
+                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{line.qty}</TableCell>
+                        <TableCell className="font-mono text-xs">{line.unit_price?.toFixed(2)}</TableCell>
+                        <TableCell className="font-mono text-xs">{line.total?.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => {
+                setParsedLines(null)
+                setPendingInvoiceId(null)
+                if (fileUrl) { URL.revokeObjectURL(fileUrl); setFileUrl(null) }
+              }}>← Annuler</Button>
+              <Button onClick={handleValidate} disabled={saving}>
+                {saving ? 'Validation…' : 'Valider la facture →'}
+              </Button>
+            </div>
           </div>
+
+          {/* Right: PDF preview */}
+          {fileUrl && (
+            <div className="flex flex-col">
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#C5C0B1' }}>
+                Aperçu de la facture
+              </p>
+              <iframe
+                src={fileUrl}
+                title="Aperçu facture"
+                className="flex-1 rounded-xl border border-[#E5E2D8]"
+                style={{ minHeight: '600px' }}
+              />
+            </div>
+          )}
         </div>
       )}
 

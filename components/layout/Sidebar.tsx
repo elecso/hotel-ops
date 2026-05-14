@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, BookOpen, Package, ChefHat, Calendar, Upload, ClipboardList, FileText, Users,
-  LogOut, ChevronDown, ChevronRight, TrendingUp,
+  LogOut, ChevronDown, ChevronRight, TrendingUp, Shirt,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -18,8 +18,23 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard',   icon: <LayoutDashboard size={16} />, color: '#602460' },
-  { label: 'Logbook',         href: '/logbook',     icon: <BookOpen size={16} />,        color: '#16a34a' },
+  { label: 'Tableau de bord', href: '/dashboard', icon: <LayoutDashboard size={16} />, color: '#602460' },
+  {
+    label: 'Logbook', icon: <BookOpen size={16} />, color: '#16a34a', children: [
+      { label: 'Journal',      href: '/logbook' },
+      { label: 'Statistique',  href: '/logbook/statistique' },
+    ],
+  },
+  { label: 'Blanchisserie', href: '/laundry', icon: <Shirt size={16} />, color: '#0ea5e9' },
+  {
+    label: 'Cost Control', icon: <TrendingUp size={16} />, color: '#0ea5e9', children: [
+      { label: 'Stats F&B',  href: '/cost-control/stats-fb' },
+      { label: 'Cost Room',  href: '/cost-control/cost-room' },
+      { label: 'Cost Food',  href: '/cost-control/cost-food' },
+      { label: 'Cost Bev',   href: '/cost-control/cost-bev' },
+      { label: 'Cost RH',    href: '/cost-control/cost-rh' },
+    ],
+  },
   {
     label: 'Inventaire', icon: <Package size={16} />, color: '#602460', children: [
       { label: 'Chambres',          href: '/inventory/rooms' },
@@ -36,7 +51,6 @@ const navItems: NavItem[] = [
   {
     label: 'Planning', icon: <Calendar size={16} />, color: '#0284c7', children: [
       { label: 'Tableau de service', href: '/duty-roster' },
-      { label: 'Coûts & Stats',      href: '/duty-roster/cost' },
     ],
   },
   { label: 'Upload F&B',    href: '/upload-fb',            icon: <Upload size={16} />,       color: '#e11d48' },
@@ -48,15 +62,6 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Factures',     href: '/invoices',             icon: <FileText size={16} />,     color: '#16a34a' },
-  {
-    label: 'Cost Control', icon: <TrendingUp size={16} />, color: '#0ea5e9', children: [
-      { label: 'Stats F&B',  href: '/cost-control/stats-fb' },
-      { label: 'Cost Room',  href: '/cost-control/cost-room' },
-      { label: 'Cost Food',  href: '/cost-control/cost-food' },
-      { label: 'Cost Bev',   href: '/cost-control/cost-bev' },
-      { label: 'Cost RH',    href: '/cost-control/cost-rh' },
-    ],
-  },
   { label: 'Utilisateurs', href: '/users',                icon: <Users size={16} />,        color: '#7B6B80' },
 ]
 

@@ -50,30 +50,37 @@ interface MetricCardProps {
 }
 
 const colorMap = {
-  purple:  { bg: '#F2EBF2', border: '#602460', text: '#602460' },
-  green:   { bg: '#f0fdf4', border: '#16a34a', text: '#15803d' },
-  amber:   { bg: '#fffbeb', border: '#d97706', text: '#b45309' },
-  sky:     { bg: '#f0f9ff', border: '#0284c7', text: '#0369a1' },
-  rose:    { bg: '#fff1f2', border: '#e11d48', text: '#be123c' },
-  default: { bg: '#FAFAF8', border: '#E5E2D8', text: '#7B6B80' },
+  purple:  { bg: '#7c3aed', border: '#6d28d9', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  green:   { bg: '#16a34a', border: '#15803d', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  amber:   { bg: '#d97706', border: '#b45309', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  sky:     { bg: '#0284c7', border: '#0369a1', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  rose:    { bg: '#e11d48', border: '#be123c', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  default: { bg: '#FAFAF8', border: '#E5E2D8', text: '#7B6B80',               value: '#3D1640' },
+}
+
+const hotelColorMap = {
+  mercure: { bg: '#602460', border: '#4a1a4a', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  ibis:    { bg: '#e11d48', border: '#be123c', text: 'rgba(255,255,255,0.8)', value: '#FFFFFF' },
+  neutral: colorMap.default,
 }
 
 export function MetricCard({ label, value, sub, hotel, compact, color = 'default' }: MetricCardProps) {
-  const c = hotel === 'mercure' ? colorMap.purple :
-            hotel === 'ibis'    ? colorMap.rose :
+  const c = hotel === 'mercure' ? hotelColorMap.mercure :
+            hotel === 'ibis'    ? hotelColorMap.ibis :
+            hotel === 'neutral' ? hotelColorMap.neutral :
             (colorMap[color] ?? colorMap.default)
   return (
     <div
-      className={`rounded-xl border-l-[3px] ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}
-      style={{ background: c.bg, borderColor: c.border, borderWidth: '1px', borderLeftWidth: '3px' }}
+      className={`rounded-xl ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}
+      style={{ background: c.bg, border: `1px solid ${c.border}`, borderLeft: `4px solid ${c.border}` }}
     >
       <p className={`uppercase tracking-wider font-medium ${compact ? 'text-[10px] mb-1' : 'text-xs mb-2'}`} style={{ color: c.text }}>
         {label}
       </p>
-      <p className={`font-bold font-mono ${compact ? 'text-xl' : 'text-2xl'}`} style={{ color: c.border }}>
+      <p className={`font-bold font-mono ${compact ? 'text-xl' : 'text-2xl'}`} style={{ color: c.value }}>
         {value}
       </p>
-      {sub && <p className={`${compact ? 'text-[10px] mt-0.5' : 'text-xs mt-1'}`} style={{ color: '#B0A5B4' }}>{sub}</p>}
+      {sub && <p className={`${compact ? 'text-[10px] mt-0.5' : 'text-xs mt-1'}`} style={{ color: c.text }}>{sub}</p>}
     </div>
   )
 }

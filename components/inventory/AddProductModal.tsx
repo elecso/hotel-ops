@@ -132,6 +132,23 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
     }
   }
 
+  const VIN_SUB_PRODUCTS: SubProductDraft[] = [
+    { name: 'Pichet 50CL', volume_cl: '50', decrement_factor: '0.66' },
+    { name: 'Pichet 25CL', volume_cl: '25', decrement_factor: '0.33' },
+    { name: 'Verre 15CL',  volume_cl: '15', decrement_factor: '0.2'  },
+    { name: 'Verre 8CL',   volume_cl: '8',  decrement_factor: '0.1'  },
+  ]
+
+  const handleCategoryChange = (v: string) => {
+    setForm(f => ({ ...f, category_id: v }))
+    if (type === 'beverage') {
+      const cat = localCategories.find(c => String(c.id) === v)
+      if (cat?.name?.toLowerCase().includes('vin')) {
+        setSubProducts(VIN_SUB_PRODUCTS)
+      }
+    }
+  }
+
   const filteredRoomTypes = type === 'room' && form.hotel_scope !== 'both'
     ? roomTypes.filter(rt => rt.hotel_id === form.hotel_scope)
     : roomTypes
@@ -192,7 +209,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
               <Label>Catégorie</Label>
               <div className="flex items-center gap-1">
                 <div className="flex-1">
-                  <Select value={form.category_id} onValueChange={v => setForm(f => ({ ...f, category_id: v }))}>
+                  <Select value={form.category_id} onValueChange={handleCategoryChange}>
                     <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                     <SelectContent>
                       {localCategories.filter(c => c.type === type).map(c => (
@@ -268,20 +285,20 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
           {type === 'room' && filteredRoomTypes.length > 0 && (
             <div className="space-y-2">
               <Label>Typologies de chambre</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {filteredRoomTypes.map(rt => (
-                  <button
+                  <label
                     key={rt.id}
-                    type="button"
-                    onClick={() => toggleRoomType(rt.id)}
-                    className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                      selectedRoomTypes.includes(rt.id)
-                        ? 'bg-[#602460] text-white border-[#602460]'
-                        : 'bg-white text-[#602460] border-[#E5E2D8] hover:border-[#602460]/40 hover:bg-[#F4F2ED]'
-                    }`}
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-[#E5E2D8] hover:bg-[#F4F2ED] transition-colors"
                   >
-                    {rt.code} — {rt.label}
-                  </button>
+                    <input
+                      type="checkbox"
+                      checked={selectedRoomTypes.includes(rt.id)}
+                      onChange={() => toggleRoomType(rt.id)}
+                      className="w-4 h-4 accent-[#602460]"
+                    />
+                    <span className="text-xs text-[#3D1640]">{rt.code} — {rt.label}</span>
+                  </label>
                 ))}
               </div>
             </div>

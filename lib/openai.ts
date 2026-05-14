@@ -68,7 +68,9 @@ async function callGpt(systemPrompt: string, base64Content: string, mediaType: s
       { type: 'image_url', image_url: { url: `data:${mediaType};base64,${base64Content}`, detail: 'high' } },
     ]
   } else {
-    const text = Buffer.from(base64Content, 'base64').toString('utf-8')
+    const rawBuf = Buffer.from(base64Content, 'base64')
+    const utf8 = rawBuf.toString('utf-8')
+    const text = utf8.includes('�') ? rawBuf.toString('latin1') : utf8
     userContent = `${textPrefix}\n${text}`
   }
 

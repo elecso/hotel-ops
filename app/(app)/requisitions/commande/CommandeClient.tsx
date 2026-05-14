@@ -36,7 +36,7 @@ interface Props {
 }
 
 const STATUS_VARIANT: Record<string, 'pending' | 'validated' | 'rejected'> = {
-  pending: 'pending', received: 'validated', cancelled: 'rejected',
+  pending: 'pending', ordered: 'pending', received: 'validated', cancelled: 'rejected',
 }
 
 export function CommandeClient({ products, orders: initial, userId }: Props) {
@@ -193,16 +193,16 @@ export function CommandeClient({ products, orders: initial, userId }: Props) {
           ) : (
             <div className="divide-y divide-[#E5E2D8]">
               {orders.map(o => {
-                const isPending = o.status === 'pending'
+                const isActionable = o.status === 'ordered'
                 const isOpen = expanded.includes(o.id)
                 return (
                   <div key={o.id}>
                     <div
-                      className={`flex items-center justify-between px-5 py-3 ${isPending ? 'cursor-pointer hover:bg-[#F9F7F4] transition-colors' : ''}`}
-                      onClick={() => isPending && toggleExpand(o.id)}
+                      className={`flex items-center justify-between px-5 py-3 ${isActionable ? 'cursor-pointer hover:bg-[#F9F7F4] transition-colors' : ''}`}
+                      onClick={() => isActionable && toggleExpand(o.id)}
                     >
                       <div className="flex items-center gap-3">
-                        {isPending && (
+                        {isActionable && (
                           isOpen
                             ? <ChevronDown size={14} className="text-[#602460]" />
                             : <ChevronRight size={14} className="text-[#B0A5B4]" />
@@ -220,12 +220,12 @@ export function CommandeClient({ products, orders: initial, userId }: Props) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={STATUS_VARIANT[o.status] ?? 'default'}>
-                          {o.status === 'pending' ? 'En attente' : o.status === 'received' ? 'Reçue' : 'Annulée'}
+                          {o.status === 'received' ? 'Reçue' : o.status === 'cancelled' ? 'Annulée' : 'En cours'}
                         </Badge>
                       </div>
                     </div>
 
-                    {isOpen && isPending && (
+                    {isOpen && isActionable && (
                       <div className="border-t border-[#E5E2D8] bg-[#FAFAF8]">
                         <Table>
                           <TableHeader>

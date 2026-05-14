@@ -7,8 +7,19 @@ export interface ParsedFbLine {
 
 function matchColumn(header: string): 'name' | 'qty' | null {
   const h = header.toLowerCase().trim()
-  if (h === 'nom' || h === 'article' || h === 'libellé') return 'name'
-  if (h.includes('brut') || h.includes('vendues brut') || h.includes('qté')) return 'qty'
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip accents
+  if (
+    h === 'nom' || h === 'name' || h === 'article' || h === 'libelle' ||
+    h === 'designation' || h === 'description' || h === 'produit' ||
+    h.startsWith('nom ') || h.startsWith('article ') || h.startsWith('libelle') ||
+    h.includes('produit') || h.includes('article')
+  ) return 'name'
+  if (
+    h.includes('brut') || h.includes('vendu') || h.includes('vente') ||
+    h.includes('qte') || h.includes('qty') || h.includes('quant') ||
+    h.includes('nbr') || h.includes('nombre') || h.includes('nb ') ||
+    h === 'qte' || h === 'qty' || h === 'nb'
+  ) return 'qty'
   return null
 }
 

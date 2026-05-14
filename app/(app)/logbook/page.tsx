@@ -22,13 +22,16 @@ export default async function LogbookPage({
     { data: news },
     { data: meetings },
     { data: toiletChecks },
+    { data: staff },
   ] = await Promise.all([
     supabase.from('logbook_news').select('*').eq('news_date', selectedDate).order('id', { ascending: false }),
     supabase.from('morning_meeting').select('*').eq('meeting_date', selectedDate).order('id', { ascending: false }),
     supabase.from('toilet_checks').select('*').eq('check_date', selectedDate),
+    supabase.from('staff').select('full_name').eq('is_active', true).order('full_name'),
   ])
 
   const isAdmin = profile?.role === 'admin'
+  const staffNames = staff?.map((s: { full_name: string }) => s.full_name) ?? []
 
   return (
     <LogbookClient
@@ -38,6 +41,7 @@ export default async function LogbookPage({
       meetings={meetings ?? []}
       toiletChecks={toiletChecks ?? []}
       isAdmin={isAdmin}
+      staffNames={staffNames}
     />
   )
 }

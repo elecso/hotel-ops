@@ -9,8 +9,12 @@ import { ChevronDown, ChevronUp, CalendarDays, CheckCircle, Download } from 'luc
 import { formatDate, isoDate } from '@/lib/utils'
 import * as XLSX from 'xlsx'
 
-const CHECKERS = ['Fadila', 'HK', 'other'] as const
 const TOILETS = [1, 2, 3] as const
+const TOILET_NAMES: Record<number, string> = {
+  1: 'Toilette Restaurant',
+  2: 'Toilette Ibis',
+  3: 'Toilette Séminaire',
+}
 
 interface Props {
   selectedDate: string
@@ -18,13 +22,16 @@ interface Props {
   meetings: MorningMeeting[]
   toiletChecks: ToiletCheck[]
   isAdmin: boolean
+  staffNames: string[]
 }
 
-export function LogbookClient({ selectedDate, news, meetings, toiletChecks }: Props) {
+export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staffNames }: Props) {
   const router = useRouter()
   const [checks, setChecks] = useState<ToiletCheck[]>(toiletChecks)
   const [meetingOpen, setMeetingOpen] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [validatingToilet, setValidatingToilet] = useState<number | null>(null)
+  const [checkerName, setCheckerName] = useState('')
 
   const today = isoDate(new Date())
   const supabase = createClient()
@@ -59,20 +66,18 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks }: Pr
     }
   }
 
-  const getCheck = (toiletId: number, checkedBy: string) =>
-    checks.find(c => c.toilet_id === toiletId && c.checked_by === checkedBy)
+  const getToiletChecks = (toiletId: number) =>
+    checks.filter(c => c.toilet_id === toiletId)
 
-  const handleValidate = async (toiletId: 1 | 2 | 3, checkedBy: 'Fadila' | 'HK' | 'other') => {
-    const existing = getCheck(toiletId, checkedBy)
-    if (existing?.validated) return // once validated, permanent
-
+  const handleValidate = async (toiletId: number, name: string) => {
+    if (!name.trim()) return
     const now = new Date().toISOString()
     const { data, error } = await supabase
       .from('toilet_checks')
       .upsert({
         check_date: selectedDate,
         toilet_id: toiletId,
-        checked_by: checkedBy,
+        checked_by: name.trim(),
         check_time: now,
         validated: true,
       }, { onConflict: 'check_date,toilet_id,checked_by' })
@@ -80,11 +85,13 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks }: Pr
       .single()
     if (!error && data) {
       setChecks(prev => {
-        const idx = prev.findIndex(c => c.toilet_id === toiletId && c.checked_by === checkedBy)
+        const idx = prev.findIndex(c => c.toilet_id === toiletId && c.checked_by === name.trim())
         if (idx >= 0) return prev.map((c, i) => i === idx ? data : c)
         return [...prev, data]
       })
     }
+    setValidatingToilet(null)
+    setCheckerName('')
   }
 
   const formatTime = (iso: string | null | undefined) => {
@@ -203,61 +210,71 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks }: Pr
             <Download size={13} /> {exporting ? 'Export…' : `Export Excel ${selectedDate.substring(0, 4)}`}
           </Button>
         </div>
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ background: '#F9F7F4', borderBottom: '1px solid #E5E2D8' }}>
-                    <th className="text-left px-4 py-2.5 font-semibold text-[#7B6B80]">Sanitaire</th>
-                    {CHECKERS.map(c => (
-                      <th key={c} className="text-center px-4 py-2.5 font-semibold text-[#7B6B80]">
-                        {c === 'other' ? 'Autre' : c}
-                      </th>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {TOILETS.map(toiletId => {
+            const toiletChecksForId = getToiletChecks(toiletId)
+            const isValidating = validatingToilet === toiletId
+            return (
+              <div
+                key={toiletId}
+                className="bg-white rounded-xl border border-[#E5E2D8] p-4 space-y-3"
+              >
+                <h3 className="font-semibold text-[#602460] text-sm">{TOILET_NAMES[toiletId]}</h3>
+
+                {toiletChecksForId.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {toiletChecksForId.map((check, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-[#16a34a]">
+                        <CheckCircle size={13} />
+                        <span className="font-medium">{check.checked_by}</span>
+                        {check.check_time && (
+                          <span className="text-[#B0A5B4]">{formatTime(check.check_time)}</span>
+                        )}
+                      </div>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {TOILETS.map(toiletId => (
-                    <tr key={toiletId} className="border-t border-[#E5E2D8]">
-                      <td className="px-4 py-3 font-medium text-[#602460]">Sanitaire {toiletId}</td>
-                      {CHECKERS.map(checker => {
-                        const check = getCheck(toiletId, checker)
-                        const isChecked = check?.validated ?? false
-                        return (
-                          <td key={checker} className="px-4 py-3 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <button
-                                onClick={() => !isChecked && handleValidate(toiletId as 1|2|3, checker as 'Fadila'|'HK'|'other')}
-                                disabled={isChecked}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                                  isChecked
-                                    ? 'bg-green-100 text-green-700 border border-green-200 cursor-not-allowed'
-                                    : 'bg-white text-[#602460] border border-[#E5E2D8] hover:bg-[#602460] hover:text-white cursor-pointer'
-                                }`}
-                              >
-                                {isChecked ? (
-                                  <><CheckCircle size={13} /> Validé</>
-                                ) : (
-                                  'Valider'
-                                )}
-                              </button>
-                              {check?.check_time && (
-                                <span className="text-[10px] text-[#B0A5B4]">
-                                  {formatTime(check.check_time)}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#B0A5B4]">Non contrôlé</p>
+                )}
+
+                {isValidating ? (
+                  <div className="space-y-2">
+                    <select
+                      value={checkerName}
+                      onChange={e => setCheckerName(e.target.value)}
+                      className="w-full h-8 rounded-md border border-[#E5E2D8] bg-white px-2 text-xs text-[#3D1640] focus:outline-none focus:ring-1 focus:ring-[#602460]/40"
+                    >
+                      <option value="">Sélectionner un nom…</option>
+                      {staffNames.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleValidate(toiletId, checkerName)}
+                        disabled={!checkerName}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[#602460] text-white hover:bg-[#4a1a4a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <CheckCircle size={12} /> Confirmer
+                      </button>
+                      <button
+                        onClick={() => { setValidatingToilet(null); setCheckerName('') }}
+                        className="px-3 py-1.5 rounded-md text-xs font-medium border border-[#E5E2D8] text-[#7B6B80] hover:bg-[#F4F2ED] transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setValidatingToilet(toiletId); setCheckerName('') }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-[#E5E2D8] text-[#602460] hover:bg-[#602460] hover:text-white hover:border-[#602460] transition-colors"
+                  >
+                    + Valider
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

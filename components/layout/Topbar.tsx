@@ -39,13 +39,13 @@ export function Topbar({ user }: TopbarProps) {
   return (
     <header
       className="flex items-center justify-between px-6 h-14 border-b flex-shrink-0"
-      style={{ background: '#161920', borderColor: '#2a2d38' }}
+      style={{ background: '#FFFFFF', borderColor: '#E5E2D8' }}
     >
-      <h1 className="text-[15px] font-semibold text-[#f0f1f5]">
+      <h1 className="text-[15px] font-semibold text-[#3D1640]">
         {title}
       </h1>
       <div className="flex items-center gap-4">
-        <span className="text-[13px] hidden sm:block text-[#55596a]">
+        <span className="text-[13px] hidden sm:block text-[#B0A5B4]">
           {todayCapitalized}
         </span>
         <div className="flex items-center gap-1.5">
@@ -54,7 +54,8 @@ export function Topbar({ user }: TopbarProps) {
         </div>
         {user && (
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-indigo-600"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+            style={{ background: '#602460' }}
             title={user.full_name}
           >
             {user.full_name?.charAt(0)?.toUpperCase() ?? '?'}

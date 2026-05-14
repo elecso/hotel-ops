@@ -32,6 +32,7 @@ export default async function LogbookPage({
 
   return (
     <LogbookClient
+      key={selectedDate}
       selectedDate={selectedDate}
       news={news ?? []}
       meetings={meetings ?? []}

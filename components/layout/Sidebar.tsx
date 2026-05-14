@@ -18,10 +18,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard', icon: <LayoutDashboard size={16} />, color: '#818cf8' },
-  { label: 'Logbook',         href: '/logbook',   icon: <BookOpen size={16} />,        color: '#34d399' },
+  { label: 'Tableau de bord', href: '/dashboard',   icon: <LayoutDashboard size={16} />, color: '#602460' },
+  { label: 'Logbook',         href: '/logbook',     icon: <BookOpen size={16} />,        color: '#16a34a' },
   {
-    label: 'Inventaire', icon: <Package size={16} />, color: '#818cf8', children: [
+    label: 'Inventaire', icon: <Package size={16} />, color: '#602460', children: [
       { label: 'Chambres',          href: '/inventory/rooms' },
       { label: 'Boissons',          href: '/inventory/beverages' },
       { label: 'Alimentation',      href: '/inventory/food' },
@@ -31,22 +31,22 @@ const navItems: NavItem[] = [
       { label: 'Blanchisserie',     href: '/inventory/laundry' },
     ],
   },
-  { label: 'Recettes', href: '/recipes', icon: <ChefHat size={16} />, color: '#fb923c' },
+  { label: 'Recettes',     href: '/recipes',              icon: <ChefHat size={16} />,      color: '#d97706' },
   {
-    label: 'Planning', icon: <Calendar size={16} />, color: '#fbbf24', children: [
+    label: 'Planning', icon: <Calendar size={16} />, color: '#0284c7', children: [
       { label: 'Tableau de service', href: '/duty-roster' },
       { label: 'Coûts & Stats',      href: '/duty-roster/cost' },
     ],
   },
-  { label: 'Upload F&B', href: '/upload-fb', icon: <Upload size={16} />, color: '#f87171' },
+  { label: 'Upload F&B',    href: '/upload-fb',            icon: <Upload size={16} />,       color: '#e11d48' },
   {
-    label: 'Réquisitions', icon: <ClipboardList size={16} />, color: '#7dd3fc', children: [
+    label: 'Réquisitions', icon: <ClipboardList size={16} />, color: '#0284c7', children: [
       { label: 'Créer',   href: '/requisitions' },
       { label: 'Valider', href: '/requisitions/validate' },
     ],
   },
-  { label: 'Factures',     href: '/invoices', icon: <FileText size={16} />,  color: '#34d399' },
-  { label: 'Utilisateurs', href: '/users',    icon: <Users size={16} />,     color: '#9095a8' },
+  { label: 'Factures',     href: '/invoices',             icon: <FileText size={16} />,     color: '#16a34a' },
+  { label: 'Utilisateurs', href: '/users',                icon: <Users size={16} />,        color: '#7B6B80' },
 ]
 
 interface SidebarProps {
@@ -75,12 +75,12 @@ export function Sidebar({ user }: SidebarProps) {
   return (
     <aside
       className="flex flex-col flex-shrink-0"
-      style={{ width: 240, background: '#161920', minHeight: '100vh', borderRight: '1px solid #2a2d38' }}
+      style={{ width: 240, background: '#FFFFFF', minHeight: '100vh', borderRight: '1px solid #E5E2D8' }}
     >
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-[#2a2d38]">
-        <div className="text-[15px] font-bold tracking-widest uppercase text-indigo-400">MERCURE</div>
-        <div className="text-[11px] tracking-wide mt-0.5 text-[#55596a]">Hotels Operations</div>
+      <div className="px-5 py-5 border-b border-[#E5E2D8]">
+        <div className="text-[15px] font-bold tracking-widest uppercase text-[#602460]">MERCURE</div>
+        <div className="text-[11px] tracking-wide mt-0.5 text-[#B0A5B4]">Hotels Operations</div>
       </div>
 
       {/* Nav */}
@@ -94,11 +94,11 @@ export function Sidebar({ user }: SidebarProps) {
                 href={item.href!}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-[13px] mb-0.5 transition-all ${
                   active
-                    ? 'bg-indigo-600/15 text-[#f0f1f5] border-l-2 pl-[10px] border-indigo-500'
-                    : 'text-[#9095a8] hover:bg-[#22252f] hover:text-[#f0f1f5]'
+                    ? 'bg-[#602460]/10 text-[#602460] border-l-2 pl-[10px] border-[#602460]'
+                    : 'text-[#7B6B80] hover:bg-[#F4F2ED] hover:text-[#3D1640]'
                 }`}
               >
-                <span className="flex-shrink-0" style={{ color: active ? (item.color ?? '#818cf8') : undefined }}>{item.icon}</span>
+                <span className="flex-shrink-0" style={{ color: active ? (item.color ?? '#602460') : undefined }}>{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             )
@@ -112,14 +112,14 @@ export function Sidebar({ user }: SidebarProps) {
               <button
                 onClick={() => toggleSection(item.label)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[13px] transition-all ${
-                  anyChildActive ? 'text-[#f0f1f5]' : 'text-[#9095a8] hover:bg-[#22252f] hover:text-[#f0f1f5]'
+                  anyChildActive ? 'text-[#3D1640]' : 'text-[#7B6B80] hover:bg-[#F4F2ED] hover:text-[#3D1640]'
                 }`}
               >
-                <span className="flex-shrink-0" style={{ color: anyChildActive ? (item.color ?? '#818cf8') : undefined }}>{item.icon}</span>
+                <span className="flex-shrink-0" style={{ color: anyChildActive ? (item.color ?? '#602460') : undefined }}>{item.icon}</span>
                 <span className="flex-1 text-left">{item.label}</span>
                 {isOpen
-                  ? <ChevronDown size={12} className="text-[#55596a]" />
-                  : <ChevronRight size={12} className="text-[#55596a]" />}
+                  ? <ChevronDown size={12} className="text-[#B0A5B4]" />
+                  : <ChevronRight size={12} className="text-[#B0A5B4]" />}
               </button>
               {isOpen && (
                 <div className="ml-7 mt-0.5 flex flex-col gap-0.5">
@@ -131,8 +131,8 @@ export function Sidebar({ user }: SidebarProps) {
                         href={child.href}
                         className={`px-3 py-1.5 rounded-md text-[12px] transition-all ${
                           active
-                            ? 'bg-indigo-600/15 text-[#f0f1f5] border-l-2 pl-[10px] border-indigo-500'
-                            : 'text-[#55596a] hover:bg-[#22252f] hover:text-[#f0f1f5]'
+                            ? 'bg-[#602460]/10 text-[#602460] border-l-2 pl-[10px] border-[#602460]'
+                            : 'text-[#B0A5B4] hover:bg-[#F4F2ED] hover:text-[#3D1640]'
                         }`}
                       >
                         {child.label}
@@ -147,18 +147,18 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* User footer */}
-      <div className="px-4 py-4 border-t border-[#2a2d38]">
+      <div className="px-4 py-4 border-t border-[#E5E2D8]">
         {user && (
           <div className="mb-3">
-            <p className="text-[#f0f1f5] text-[13px] font-medium truncate">{user.full_name}</p>
-            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-indigo-600/15 text-indigo-400 font-semibold uppercase tracking-wide border border-indigo-500/25">
+            <p className="text-[#3D1640] text-[13px] font-medium truncate">{user.full_name}</p>
+            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded bg-[#602460]/10 text-[#602460] font-semibold uppercase tracking-wide border border-[#602460]/20">
               {user.role}
             </span>
           </div>
         )}
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 text-[#55596a] hover:text-[#f87171] text-[13px] transition-colors"
+          className="flex items-center gap-2 text-[#B0A5B4] hover:text-red-500 text-[13px] transition-colors"
         >
           <LogOut size={14} />
           <span>Déconnexion</span>

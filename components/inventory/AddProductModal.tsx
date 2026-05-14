@@ -144,7 +144,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
         </DialogHeader>
 
         <div className="px-6 py-4 space-y-4">
-          {error && <div className="text-sm text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/30 rounded px-3 py-2">{error}</div>}
+          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
@@ -170,7 +170,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 <button
                   type="button"
                   onClick={() => setShowNewSupplier(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold"
                   title="Nouveau fournisseur"
                 >+</button>
               </div>
@@ -204,7 +204,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 <button
                   type="button"
                   onClick={() => setShowNewCategory(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold"
                   title="Nouvelle catégorie"
                 >+</button>
               </div>
@@ -276,8 +276,8 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                     onClick={() => toggleRoomType(rt.id)}
                     className={`text-xs px-3 py-1 rounded-full border transition-colors ${
                       selectedRoomTypes.includes(rt.id)
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-[#13151c] text-indigo-400 border-[#2a2d38] hover:border-indigo-500/50'
+                        ? 'bg-[#602460] text-white border-[#602460]'
+                        : 'bg-white text-[#602460] border-[#E5E2D8] hover:border-[#602460]/40 hover:bg-[#F4F2ED]'
                     }`}
                   >
                     {rt.code} — {rt.label}
@@ -296,11 +296,11 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 </Button>
               </div>
               {subProducts.map((sp, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded-md border border-[#2a2d38] bg-[#13151c]">
+                <div key={i} className="flex items-center gap-2 p-2 rounded-md border border-[#E5E2D8] bg-[#F9F7F4]">
                   <Input placeholder="Nom (ex: Verre 25cl)" value={sp.name} onChange={e => updateSubProduct(i, 'name', e.target.value)} className="flex-1" />
                   <Input placeholder="Volume (cl)" value={sp.volume_cl} onChange={e => updateSubProduct(i, 'volume_cl', e.target.value)} type="number" className="w-24" />
                   <Input placeholder="Facteur" value={sp.decrement_factor} onChange={e => updateSubProduct(i, 'decrement_factor', e.target.value)} type="number" step="0.01" className="w-24" />
-                  <button onClick={() => removeSubProduct(i)} className="text-[#f87171] hover:text-[#ef4444]">
+                  <button onClick={() => removeSubProduct(i)} className="text-red-400 hover:text-red-600">
                     <Trash2 size={14} />
                   </button>
                 </div>

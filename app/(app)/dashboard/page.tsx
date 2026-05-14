@@ -27,7 +27,7 @@ export default async function DashboardPage({
       .select('*')
       .gte('forecast_date', selectedDate)
       .order('forecast_date')
-      .limit(10),
+      .limit(20),
   ])
 
   return (

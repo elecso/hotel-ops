@@ -10,34 +10,20 @@ import { Check, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDate, currentMonth } from '@/lib/utils'
 
 interface ReqLine {
-  id: number
-  product_id: number
-  qty_requested: number
-  qty_validated: number | null
+  id: number; product_id: number; qty_requested: number; qty_validated: number | null
   product: { id: number; name: string; unit: string } | null
 }
-
 interface Requisition {
-  id: number
-  request_date: string
-  type: string
-  notes: string
-  status: string
-  requester: { full_name: string; role: string } | null
-  lines: ReqLine[]
+  id: number; request_date: string; type: string; notes: string; status: string
+  requester: { full_name: string; role: string } | null; lines: ReqLine[]
 }
-
 const TYPE_LABELS: Record<string, string> = {
   room: 'Chambre', beverage: 'Boisson', food: 'Alimentation',
   cleaning_fb: 'Nettoyage F&B', cleaning_general: 'Nettoyage général',
   meeting: 'Réunion', laundry: 'Blanchisserie',
 }
 
-interface Props {
-  requisitions: Requisition[]
-}
-
-export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
+export function ValidateRequisitionsClient({ requisitions: initial }: { requisitions: Requisition[] }) {
   const [requisitions, setRequisitions] = useState(initial)
   const [expanded, setExpanded] = useState<number[]>([])
   const [lineQty, setLineQty] = useState<Record<number, string>>({})
@@ -62,8 +48,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
           { product_id: line.product_id, month, bought: 0, opening_stock: 0, used: 0 },
           { onConflict: 'product_id,month', ignoreDuplicates: true }
         )
-        const { data: sm } = await supabase
-          .from('stock_months').select('bought')
+        const { data: sm } = await supabase.from('stock_months').select('bought')
           .eq('product_id', line.product_id).eq('month', month).single()
         await supabase.from('stock_months').update({ bought: (sm?.bought ?? 0) + qtyVal })
           .eq('product_id', line.product_id).eq('month', month)
@@ -85,91 +70,69 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-sm text-[#55596a]">Aucune réquisition en attente de validation.</p>
+          <p className="text-sm text-[#B0A5B4]">Aucune réquisition en attente de validation.</p>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4 w-full max-w-4xl">
       {requisitions.map(req => {
         const isOpen = expanded.includes(req.id)
         return (
           <Card key={req.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <button
-                  onClick={() => toggleExpand(req.id)}
-                  className="flex items-center gap-3 flex-1 text-left"
-                >
+                <button onClick={() => toggleExpand(req.id)} className="flex items-center gap-3 flex-1 text-left">
                   {isOpen
-                    ? <ChevronDown size={16} className="text-indigo-400" />
-                    : <ChevronRight size={16} className="text-[#55596a]" />}
+                    ? <ChevronDown size={16} className="text-[#602460]" />
+                    : <ChevronRight size={16} className="text-[#B0A5B4]" />}
                   <div>
                     <div className="flex items-center gap-2">
                       <CardTitle>{req.requester?.full_name ?? 'Utilisateur'}</CardTitle>
                       <Badge variant="pending">En attente</Badge>
                     </div>
-                    <p className="text-xs mt-0.5 text-[#55596a]">
+                    <p className="text-xs mt-0.5 text-[#B0A5B4]">
                       {formatDate(req.request_date)} — {TYPE_LABELS[req.type] ?? req.type} — {req.lines.length} ligne(s)
                     </p>
                   </div>
                 </button>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleReject(req.id)}
-                    disabled={processing === req.id}
-                  >
+                  <Button variant="danger" size="sm" onClick={() => handleReject(req.id)} disabled={processing === req.id}>
                     <X size={14} /> Rejeter
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleApprove(req)}
-                    disabled={processing === req.id}
-                  >
+                  <Button size="sm" onClick={() => handleApprove(req)} disabled={processing === req.id}>
                     <Check size={14} /> Approuver
                   </Button>
                 </div>
               </div>
             </CardHeader>
-
             {isOpen && (
               <CardContent className="p-0">
                 {req.notes && (
                   <div className="px-5 pb-2">
-                    <p className="text-xs italic text-[#55596a]">Note: {req.notes}</p>
+                    <p className="text-xs italic text-[#B0A5B4]">Note: {req.notes}</p>
                   </div>
                 )}
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Produit</TableHead>
-                      <TableHead>Demandé</TableHead>
-                      <TableHead>Validé</TableHead>
-                      <TableHead>Unité</TableHead>
+                      <TableHead>Produit</TableHead><TableHead>Demandé</TableHead>
+                      <TableHead>Validé</TableHead><TableHead>Unité</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {req.lines.map(line => (
                       <TableRow key={line.id}>
                         <TableCell>{line.product?.name ?? '—'}</TableCell>
-                        <TableCell className="font-mono text-[#9095a8]">{line.qty_requested}</TableCell>
+                        <TableCell className="font-mono text-[#7B6B80]">{line.qty_requested}</TableCell>
                         <TableCell>
-                          <Input
-                            type="number"
-                            value={getQty(line)}
+                          <Input type="number" value={getQty(line)}
                             onChange={e => setLineQty(prev => ({ ...prev, [line.id]: e.target.value }))}
-                            className="h-7 w-20 text-xs"
-                            min="0"
-                            step="0.1"
-                          />
+                            className="h-7 w-20 text-xs" min="0" step="0.1" />
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-[#55596a]">
-                          {line.product?.unit ?? ''}
-                        </TableCell>
+                        <TableCell className="font-mono text-xs text-[#B0A5B4]">{line.product?.unit ?? ''}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

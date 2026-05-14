@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Upload, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, CheckCircle, X, EyeOff } from 'lucide-react'
 import { isoDate } from '@/lib/utils'
 
 interface MenuItem { id: number; name: string; outlet: string; recipe_id: number | null }
@@ -22,7 +22,7 @@ interface ParsedLine {
 }
 
 interface MappedLine extends ParsedLine {
-  mapped_to: string // 'menu_item:<id>' or 'beverage:<id>'
+  mapped_to: string
   ai_matched: boolean
 }
 
@@ -35,6 +35,15 @@ interface Props {
 
 type Step = 1 | 2 | 3 | 4
 
+function getSkipForever(): string[] {
+  try { return JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('fb_skip_forever') || '[]' : '[]') }
+  catch { return [] }
+}
+
+function saveSkipForever(list: string[]) {
+  try { localStorage.setItem('fb_skip_forever', JSON.stringify(list)) } catch { /* noop */ }
+}
+
 export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings }: Props) {
   const [step, setStep] = useState<Step>(1)
   const [date, setDate] = useState(defaultDate)
@@ -42,7 +51,6 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [lines, setLines] = useState<MappedLine[]>([])
   const supabase = createClient()
 
@@ -63,7 +71,6 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
       const bev = beverages.find(b => b.id === mapping.product_id)
       if (bev) return { value: `beverage:${bev.id}`, aiMatched: true }
     }
-    // Fuzzy: find close menu item name
     const lower = rawName.toLowerCase()
     const menuMatch = menuItems.find(m => m.name.toLowerCase().includes(lower) || lower.includes(m.name.toLowerCase()))
     if (menuMatch) return { value: `menu_item:${menuMatch.id}`, aiMatched: true }
@@ -84,10 +91,13 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
       if (!res.ok) throw new Error(await res.text())
       const parsed: ParsedLine[] = await res.json()
 
-      const mapped: MappedLine[] = parsed.map(line => {
-        const { value, aiMatched } = preFillMapping(line.raw_name)
-        return { ...line, mapped_to: value, ai_matched: aiMatched }
-      })
+      const skipForever = getSkipForever()
+      const mapped: MappedLine[] = parsed
+        .filter(line => !skipForever.includes(line.raw_name))
+        .map(line => {
+          const { value, aiMatched } = preFillMapping(line.raw_name)
+          return { ...line, mapped_to: value, ai_matched: aiMatched }
+        })
       setLines(mapped)
       setStep(3)
     } catch (e: unknown) {
@@ -100,12 +110,21 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const updateMapping = (i: number, value: string) =>
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, mapped_to: value } : l))
 
+  const handleSkip = (i: number) =>
+    setLines(prev => prev.filter((_, idx) => idx !== i))
+
+  const handleSkipForever = (rawName: string) => {
+    const current = getSkipForever()
+    const updated = [...new Set([...current, rawName])]
+    saveSkipForever(updated)
+    setLines(prev => prev.filter(l => l.raw_name !== rawName))
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setError('')
 
     try {
-      // Insert fb_import record
       const { data: fbImport } = await supabase
         .from('fb_imports')
         .insert({ import_date: date, status: 'validated' })
@@ -114,7 +133,6 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
 
       const fbImportId = fbImport?.id
 
-      // Save mappings & process stock
       for (const line of lines) {
         if (!line.mapped_to) continue
 
@@ -129,7 +147,6 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
           })
         }
 
-        // Upsert AI mapping
         const productId = parseInt(mapId)
         if (productId) {
           await supabase.from('product_ai_mappings').upsert(
@@ -139,7 +156,6 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
         }
       }
 
-      setSuccess(true)
       setStep(4)
     } catch (e: unknown) {
       setError((e as Error).message)
@@ -149,7 +165,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-6 w-full max-w-5xl">
       {/* Step indicators */}
       <div className="flex items-center gap-2">
         {[1, 2, 3, 4].map(s => (
@@ -158,15 +174,15 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                 step === s ? 'bg-[#602460] text-white' :
                 step > s ? 'bg-green-500 text-white' :
-                'bg-[#DFDBCF] text-[#C5C0B1]'
+                'bg-[#F4F2ED] text-[#B0A5B4] border border-[#E5E2D8]'
               }`}
             >
               {step > s ? '✓' : s}
             </div>
-            {s < 4 && <div className={`h-0.5 w-8 ${step > s ? 'bg-green-500' : 'bg-[#DFDBCF]'}`} />}
+            {s < 4 && <div className={`h-0.5 w-8 ${step > s ? 'bg-green-500' : 'bg-[#E5E2D8]'}`} />}
           </div>
         ))}
-        <span className="ml-2 text-sm" style={{ color: '#C5C0B1' }}>
+        <span className="ml-2 text-sm text-[#B0A5B4]">
           {step === 1 ? 'Sélectionner la date' : step === 2 ? 'Upload du fichier' : step === 3 ? 'Mapping & validation' : 'Confirmé'}
         </span>
       </div>
@@ -186,9 +202,9 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Fichier (PDF ou CSV)</Label>
+              <Label>Fichier Excel (.xlsx) ou PDF</Label>
               <div
-                className="border-2 border-dashed border-[#C5C0B1] rounded-[10px] p-8 text-center cursor-pointer hover:border-[#602460] transition-colors"
+                className="border-2 border-dashed border-[#E5E2D8] rounded-xl p-8 text-center cursor-pointer hover:border-[#602460] transition-colors"
                 onClick={() => document.getElementById('fb-upload')?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => {
@@ -197,12 +213,12 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                   if (f) { setFile(f); setStep(2) }
                 }}
               >
-                <Upload size={24} className="mx-auto mb-2" style={{ color: '#C5C0B1' }} />
+                <Upload size={24} className="mx-auto mb-2 text-[#B0A5B4]" />
                 {file ? (
-                  <p className="text-sm font-medium" style={{ color: '#602460' }}>{file.name}</p>
+                  <p className="text-sm font-medium text-[#602460]">{file.name}</p>
                 ) : (
-                  <p className="text-sm" style={{ color: '#C5C0B1' }}>
-                    Glisser-déposer ou cliquer pour sélectionner un fichier PDF ou CSV
+                  <p className="text-sm text-[#B0A5B4]">
+                    Glisser-déposer ou cliquer pour sélectionner un fichier Excel ou PDF
                   </p>
                 )}
                 <input
@@ -214,9 +230,9 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                 />
               </div>
             </div>
-            {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+            {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</div>}
             <Button onClick={handleParse} disabled={!file || !date || parsing} className="w-full">
-              {parsing ? 'Analyse en cours (Claude AI)…' : 'Analyser le fichier →'}
+              {parsing ? 'Analyse en cours…' : 'Analyser le fichier →'}
             </Button>
           </CardContent>
         </Card>
@@ -227,39 +243,63 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Mapping des ventes — {date}</CardTitle>
+              <div>
+                <CardTitle>Mapping des ventes — {date}</CardTitle>
+                <p className="text-xs text-[#B0A5B4] mt-1">
+                  Extrait : Nom · Quantités vendues brutes · Ventes moins remises
+                </p>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Produit brut (fichier)</TableHead>
+                    <TableHead>Produit (fichier)</TableHead>
                     <TableHead>Mapping produit</TableHead>
-                    <TableHead>Qté</TableHead>
-                    <TableHead>CA (€)</TableHead>
+                    <TableHead>Qté brute</TableHead>
+                    <TableHead>Ventes nettes (€)</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {lines.map((line, i) => (
                     <TableRow key={i}>
-                      <TableCell className="font-mono text-xs max-w-[180px] truncate">{line.raw_name}</TableCell>
+                      <TableCell className="font-mono text-xs max-w-[180px] truncate text-[#3D1640]">{line.raw_name}</TableCell>
                       <TableCell>
                         <select
                           value={line.mapped_to}
                           onChange={e => updateMapping(i, e.target.value)}
-                          className="w-full h-8 rounded border border-[#C5C0B1] bg-white px-2 text-xs text-[#3D1640] focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
+                          className="w-full h-8 rounded-md border border-[#E5E2D8] bg-white px-2 text-xs text-[#3D1640] focus:outline-none focus:ring-1 focus:ring-[#602460]/30"
                         >
                           <option value="">— Non mappé —</option>
                           {allOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                       </TableCell>
-                      <TableCell className="font-mono">{line.qty}</TableCell>
-                      <TableCell className="font-mono">{line.total_revenue?.toFixed(2)}</TableCell>
+                      <TableCell className="font-mono text-[#3D1640]">{line.qty}</TableCell>
+                      <TableCell className="font-mono text-[#602460] font-medium">{line.total_revenue?.toFixed(2)}</TableCell>
                       <TableCell>
                         {line.ai_matched
                           ? <Badge variant="validated">Auto-mappé</Badge>
                           : <Badge variant="pending">À mapper</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleSkip(i)}
+                            title="Ignorer pour cet import"
+                            className="p-1 rounded text-[#B0A5B4] hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleSkipForever(line.raw_name)}
+                            title="Ignorer toujours (ne plus afficher)"
+                            className="p-1 rounded text-[#B0A5B4] hover:text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <EyeOff size={14} />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -267,10 +307,13 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
               </Table>
             </CardContent>
           </Card>
-          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+          {lines.length === 0 && (
+            <p className="text-sm text-center text-[#B0A5B4] py-4">Aucun produit à mapper.</p>
+          )}
+          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</div>}
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setStep(1)}>← Recommencer</Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || lines.length === 0}>
               {saving ? 'Enregistrement…' : 'Valider les ventes →'}
             </Button>
           </div>
@@ -282,11 +325,11 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
         <Card>
           <CardContent className="py-12 text-center">
             <CheckCircle size={48} className="mx-auto mb-4 text-green-500" />
-            <h3 className="text-lg font-semibold mb-2" style={{ color: '#3D1640' }}>Ventes enregistrées !</h3>
-            <p className="text-sm mb-6" style={{ color: '#C5C0B1' }}>
+            <h3 className="text-lg font-semibold mb-2 text-[#3D1640]">Ventes enregistrées !</h3>
+            <p className="text-sm mb-6 text-[#B0A5B4]">
               Les ventes du {date} ont été importées et les mappings ont été sauvegardés.
             </p>
-            <Button onClick={() => { setStep(1); setFile(null); setLines([]); setSuccess(false) }}>
+            <Button onClick={() => { setStep(1); setFile(null); setLines([]) }}>
               Nouveau upload
             </Button>
           </CardContent>

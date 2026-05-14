@@ -4,30 +4,29 @@
   --font-sans: 'Inter', 'Helvetica Neue', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
 
-  --color-background: #0f1117;
-  --color-foreground: #f0f1f5;
+  --color-background: #F4F2ED;
+  --color-foreground: #3D1640;
 }
 
 :root {
   --sidebar-width: 240px;
-  /* Design tokens */
-  --bg-base:     #0f1117;
-  --bg-surface:  #161920;
-  --bg-card:     #1c1e26;
-  --bg-elevated: #22252f;
-  --bg-input:    #13151c;
-  --border:      #2a2d38;
-  --border-lt:   #363944;
-  --text-1:      #f0f1f5;
-  --text-2:      #9095a8;
-  --text-3:      #55596a;
-  --accent:      #6366f1;
-  --accent-lt:   #818cf8;
-  --accent-dim:  #1e2048;
-  --success:     #10b981;
-  --warning:     #f59e0b;
-  --danger:      #ef4444;
-  --info:        #38bdf8;
+  --bg-base:     #F4F2ED;
+  --bg-surface:  #FFFFFF;
+  --bg-card:     #FFFFFF;
+  --bg-elevated: #EEEAE3;
+  --bg-input:    #FFFFFF;
+  --border:      #E5E2D8;
+  --border-lt:   #D4D0C8;
+  --text-1:      #3D1640;
+  --text-2:      #7B6B80;
+  --text-3:      #B0A5B4;
+  --accent:      #602460;
+  --accent-lt:   #7E3A7E;
+  --accent-dim:  #F2EBF2;
+  --success:     #16a34a;
+  --warning:     #d97706;
+  --danger:      #dc2626;
+  --info:        #0284c7;
 }
 
 * { box-sizing: border-box; }

@@ -124,7 +124,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
         </DialogHeader>
 
         <div className="px-6 py-4 space-y-4">
-          {error && <div className="text-sm text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/30 rounded px-3 py-2">{error}</div>}
+          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
@@ -151,7 +151,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
                 <button
                   type="button"
                   onClick={() => setShowNewSupplier(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold"
                   title="Nouveau fournisseur"
                 >+</button>
               </div>
@@ -188,7 +188,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
                 <button
                   type="button"
                   onClick={() => setShowNewCategory(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#2a2d38] bg-[#13151c] text-indigo-400 hover:bg-indigo-600/15 hover:border-indigo-500/50 transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold"
                   title="Nouvelle catégorie"
                 >+</button>
               </div>

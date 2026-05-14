@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import type { LogbookNews, MorningMeeting, ToiletCheck } from '@/lib/types'
-import { ChevronDown, ChevronUp, CalendarDays, CheckCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, CalendarDays, CheckCircle, Download } from 'lucide-react'
 import { formatDate, isoDate } from '@/lib/utils'
+import * as XLSX from 'xlsx'
 
 const CHECKERS = ['Fadila', 'HK', 'other'] as const
 const TOILETS = [1, 2, 3] as const
@@ -23,10 +24,40 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks }: Pr
   const router = useRouter()
   const [checks, setChecks] = useState<ToiletCheck[]>(toiletChecks)
   const [meetingOpen, setMeetingOpen] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   const today = isoDate(new Date())
   const supabase = createClient()
   const dateLabel = formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  const handleExportExcel = async () => {
+    setExporting(true)
+    try {
+      const yearStart = selectedDate.substring(0, 4) + '-01-01'
+      const { data } = await supabase
+        .from('toilet_checks')
+        .select('*')
+        .gte('check_date', yearStart)
+        .lte('check_date', today)
+        .order('check_date', { ascending: true })
+        .order('toilet_id', { ascending: true })
+
+      const rows = (data ?? []).map((c: ToiletCheck) => ({
+        Date: c.check_date,
+        Sanitaire: `Sanitaire ${c.toilet_id}`,
+        'Contrôlé par': c.checked_by === 'other' ? 'Autre' : c.checked_by,
+        Validé: c.validated ? 'Oui' : 'Non',
+        Heure: c.check_time ? new Date(c.check_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+      }))
+
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Contrôles sanitaires')
+      XLSX.writeFile(wb, `controles-sanitaires-${selectedDate.substring(0, 4)}.xlsx`)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const getCheck = (toiletId: number, checkedBy: string) =>
     checks.find(c => c.toilet_id === toiletId && c.checked_by === checkedBy)
@@ -164,9 +195,14 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks }: Pr
 
       {/* Toilet checks */}
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
-          Contrôles sanitaires
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: '#C5C0B1' }}>
+            Contrôles sanitaires
+          </h2>
+          <Button variant="secondary" size="sm" onClick={handleExportExcel} disabled={exporting}>
+            <Download size={13} /> {exporting ? 'Export…' : `Export Excel ${selectedDate.substring(0, 4)}`}
+          </Button>
+        </div>
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">

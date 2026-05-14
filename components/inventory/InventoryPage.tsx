@@ -189,7 +189,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
                 onChange={handleCsvImport}
               />
               <a
-                href={`/samples/products-${type === 'cleaning_fb' || type === 'cleaning_general' ? 'cleaning' : type === 'room' ? 'room' : type === 'beverage' ? 'beverage' : type === 'food' ? 'food' : 'room'}-sample.csv`}
+                href={`/samples/products-${type === 'cleaning_fb' || type === 'cleaning_general' ? 'cleaning' : type === 'room' ? 'room' : type === 'beverage' ? 'beverage' : type === 'food' ? 'food' : type === 'ingredient' ? 'ingredient' : 'room'}-sample.csv`}
                 download
                 className="text-[11px] text-[#B0A5B4] hover:text-[#602460] underline underline-offset-2 transition-colors"
               >

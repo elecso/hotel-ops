@@ -27,6 +27,8 @@ alter table forecast_occupancy add column if not exists rooms_sold       int;
 alter table forecast_occupancy add column if not exists adr              numeric(10,2);
 alter table forecast_occupancy add column if not exists revpar           numeric(10,2);
 alter table forecast_occupancy add column if not exists updated_at       timestamptz default now();
+alter table forecast_occupancy add column if not exists arrivals         int;
+alter table forecast_occupancy add column if not exists departures       int;
 
 -- ============================================================
 -- forecast_fb_covers

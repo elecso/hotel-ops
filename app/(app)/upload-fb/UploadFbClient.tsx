@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Upload, CheckCircle, X, EyeOff } from 'lucide-react'
+import { Upload, CheckCircle, X, EyeOff, Plus } from 'lucide-react'
 import { isoDate } from '@/lib/utils'
 
 interface MenuItem { id: number; name: string; outlet: string; recipe_id: number | null }
@@ -17,8 +17,6 @@ interface AiMapping { id: number; raw_name: string; product_id: number; confirme
 interface ParsedLine {
   raw_name: string
   qty: number
-  unit_price: number
-  total_revenue: number
 }
 
 interface MappedLine extends ParsedLine {
@@ -44,6 +42,13 @@ function saveSkipForever(list: string[]) {
   try { localStorage.setItem('fb_skip_forever', JSON.stringify(list)) } catch { /* noop */ }
 }
 
+interface CreateProductForm {
+  lineIdx: number
+  name: string
+  type: 'food' | 'beverage'
+  unit: string
+}
+
 export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings }: Props) {
   const [step, setStep] = useState<Step>(1)
   const [date, setDate] = useState(defaultDate)
@@ -52,12 +57,16 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [lines, setLines] = useState<MappedLine[]>([])
+  const [localMenuItems, setLocalMenuItems] = useState<MenuItem[]>(menuItems)
+  const [localBeverages, setLocalBeverages] = useState<BeverageProduct[]>(beverages)
+  const [createForm, setCreateForm] = useState<CreateProductForm | null>(null)
+  const [creating, setCreating] = useState(false)
   const supabase = createClient()
 
-  const allOptions = [
-    ...menuItems.map(m => ({ value: `menu_item:${m.id}`, label: `[Menu] ${m.name} — ${m.outlet}` })),
-    ...beverages.map(b => ({ value: `beverage:${b.id}`, label: `[Boisson] ${b.name}` })),
-    ...beverages.flatMap(b => b.sub_products.map(sp => ({
+  const buildOptions = (items: MenuItem[], bevs: BeverageProduct[]) => [
+    ...items.map(m => ({ value: `menu_item:${m.id}`, label: `[Menu] ${m.name} — ${m.outlet}` })),
+    ...bevs.map(b => ({ value: `beverage:${b.id}`, label: `[Boisson] ${b.name}` })),
+    ...bevs.flatMap(b => b.sub_products.map(sp => ({
       value: `sub_product:${sp.id}`,
       label: `[Boisson] ${b.name} — ${sp.name}`,
     }))),
@@ -66,13 +75,13 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const preFillMapping = (rawName: string): { value: string; aiMatched: boolean } => {
     const mapping = confirmedMappings.find(m => m.raw_name.toLowerCase() === rawName.toLowerCase())
     if (mapping) {
-      const menuItem = menuItems.find(mi => mi.id === mapping.product_id)
+      const menuItem = localMenuItems.find(mi => mi.id === mapping.product_id)
       if (menuItem) return { value: `menu_item:${menuItem.id}`, aiMatched: true }
-      const bev = beverages.find(b => b.id === mapping.product_id)
+      const bev = localBeverages.find(b => b.id === mapping.product_id)
       if (bev) return { value: `beverage:${bev.id}`, aiMatched: true }
     }
     const lower = rawName.toLowerCase()
-    const menuMatch = menuItems.find(m => m.name.toLowerCase().includes(lower) || lower.includes(m.name.toLowerCase()))
+    const menuMatch = localMenuItems.find(m => m.name.toLowerCase().includes(lower) || lower.includes(m.name.toLowerCase()))
     if (menuMatch) return { value: `menu_item:${menuMatch.id}`, aiMatched: true }
     return { value: '', aiMatched: false }
   }
@@ -115,9 +124,47 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
 
   const handleSkipForever = (rawName: string) => {
     const current = getSkipForever()
-    const updated = [...new Set([...current, rawName])]
-    saveSkipForever(updated)
+    saveSkipForever([...new Set([...current, rawName])])
     setLines(prev => prev.filter(l => l.raw_name !== rawName))
+  }
+
+  const handleCreateProduct = async () => {
+    if (!createForm || !createForm.name.trim()) return
+    setCreating(true)
+    try {
+      if (createForm.type === 'food') {
+        const { data } = await supabase
+          .from('menu_items')
+          .insert({ name: createForm.name.trim(), outlet: 'lunch', is_active: true })
+          .select('id, name, outlet, recipe_id')
+          .single()
+        if (data) {
+          const newItem = data as MenuItem
+          setLocalMenuItems(prev => [...prev, newItem])
+          setLines(prev => prev.map((l, idx) =>
+            idx === createForm.lineIdx ? { ...l, mapped_to: `menu_item:${newItem.id}` } : l
+          ))
+        }
+      } else {
+        const { data } = await supabase
+          .from('products')
+          .insert({ name: createForm.name.trim(), type: 'beverage', unit: createForm.unit || null, is_active: true })
+          .select('id, name, unit')
+          .single()
+        if (data) {
+          const newBev: BeverageProduct = { id: data.id, name: data.name, unit: data.unit ?? '', sub_products: [] }
+          setLocalBeverages(prev => [...prev, newBev])
+          setLines(prev => prev.map((l, idx) =>
+            idx === createForm.lineIdx ? { ...l, mapped_to: `beverage:${newBev.id}` } : l
+          ))
+        }
+      }
+      setCreateForm(null)
+    } catch (e: unknown) {
+      setError((e as Error).message)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleSave = async () => {
@@ -246,7 +293,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
               <div>
                 <CardTitle>Mapping des ventes — {date}</CardTitle>
                 <p className="text-xs text-[#B0A5B4] mt-1">
-                  Extrait : Nom · Quantités vendues brutes · Ventes moins remises
+                  Colonnes extraites : Nom · Quantité vendue
                 </p>
               </div>
             </CardHeader>
@@ -256,8 +303,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                   <TableRow>
                     <TableHead>Produit (fichier)</TableHead>
                     <TableHead>Mapping produit</TableHead>
-                    <TableHead>Qté brute</TableHead>
-                    <TableHead>Ventes nettes (€)</TableHead>
+                    <TableHead>Quantité</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -267,17 +313,25 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                     <TableRow key={i}>
                       <TableCell className="font-mono text-xs max-w-[180px] truncate text-[#3D1640]">{line.raw_name}</TableCell>
                       <TableCell>
-                        <select
-                          value={line.mapped_to}
-                          onChange={e => updateMapping(i, e.target.value)}
-                          className="w-full h-8 rounded-md border border-[#E5E2D8] bg-white px-2 text-xs text-[#3D1640] focus:outline-none focus:ring-1 focus:ring-[#602460]/30"
-                        >
-                          <option value="">— Non mappé —</option>
-                          {allOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={line.mapped_to}
+                            onChange={e => updateMapping(i, e.target.value)}
+                            className="flex-1 h-8 rounded-md border border-[#E5E2D8] bg-white px-2 text-xs text-[#3D1640] focus:outline-none focus:ring-1 focus:ring-[#602460]/30"
+                          >
+                            <option value="">— Non mappé —</option>
+                            {buildOptions(localMenuItems, localBeverages).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                          <button
+                            onClick={() => setCreateForm({ lineIdx: i, name: line.raw_name, type: 'food', unit: '' })}
+                            title="Créer un nouveau produit"
+                            className="p-1.5 rounded text-[#B0A5B4] hover:text-[#602460] hover:bg-[#602460]/10 transition-colors flex-shrink-0"
+                          >
+                            <Plus size={13} />
+                          </button>
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-[#3D1640]">{line.qty}</TableCell>
-                      <TableCell className="font-mono text-[#602460] font-medium">{line.total_revenue?.toFixed(2)}</TableCell>
                       <TableCell>
                         {line.ai_matched
                           ? <Badge variant="validated">Auto-mappé</Badge>
@@ -307,6 +361,54 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
               </Table>
             </CardContent>
           </Card>
+
+          {/* Inline create product modal */}
+          {createForm && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Créer un nouveau produit</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">Nom du produit</Label>
+                    <Input
+                      value={createForm.name}
+                      onChange={e => setCreateForm(f => f ? { ...f, name: e.target.value } : f)}
+                      placeholder="Nom du produit"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Type</Label>
+                    <select
+                      value={createForm.type}
+                      onChange={e => setCreateForm(f => f ? { ...f, type: e.target.value as 'food' | 'beverage' } : f)}
+                      className="h-9 rounded-md border border-[#E5E2D8] px-2 text-sm text-[#3D1640] focus:outline-none"
+                    >
+                      <option value="food">Alimentation (Menu)</option>
+                      <option value="beverage">Boisson</option>
+                    </select>
+                  </div>
+                  {createForm.type === 'beverage' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Unité</Label>
+                      <Input
+                        value={createForm.unit}
+                        onChange={e => setCreateForm(f => f ? { ...f, unit: e.target.value } : f)}
+                        placeholder="ex: bouteille"
+                        className="w-32"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCreateProduct} disabled={creating || !createForm.name.trim()}>
+                    {creating ? 'Création…' : 'Créer et mapper'}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setCreateForm(null)}>Annuler</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {lines.length === 0 && (
             <p className="text-sm text-center text-[#B0A5B4] py-4">Aucun produit à mapper.</p>
           )}

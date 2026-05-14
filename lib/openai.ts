@@ -26,8 +26,24 @@ export interface ParsedInvoiceLine {
 export interface ParsedFbLine {
   raw_name: string
   qty: number
-  unit_price: number
-  total_revenue: number
+}
+
+function extractJson(raw: string): string {
+  // Strip markdown code fences
+  let s = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  // Find the first [ or { and trim everything before it
+  const arrIdx = s.indexOf('[')
+  const objIdx = s.indexOf('{')
+  if (arrIdx !== -1 && (objIdx === -1 || arrIdx < objIdx)) {
+    s = s.substring(arrIdx)
+    const lastBracket = s.lastIndexOf(']')
+    if (lastBracket !== -1) s = s.substring(0, lastBracket + 1)
+  } else if (objIdx !== -1) {
+    s = s.substring(objIdx)
+    const lastBrace = s.lastIndexOf('}')
+    if (lastBrace !== -1) s = s.substring(0, lastBrace + 1)
+  }
+  return s
 }
 
 async function callGpt(systemPrompt: string, base64Content: string, mediaType: string, textPrefix: string): Promise<string> {
@@ -39,7 +55,6 @@ async function callGpt(systemPrompt: string, base64Content: string, mediaType: s
   let userContent: any
 
   if (isPdf) {
-    // Use the file content type — supported by gpt-4o for PDF documents
     userContent = [
       {
         type: 'file',
@@ -57,7 +72,6 @@ async function callGpt(systemPrompt: string, base64Content: string, mediaType: s
       },
     ]
   } else {
-    // CSV / plain text
     const text = Buffer.from(base64Content, 'base64').toString('utf-8')
     userContent = `${textPrefix}\n${text}`
   }
@@ -72,22 +86,22 @@ async function callGpt(systemPrompt: string, base64Content: string, mediaType: s
   })
 
   const raw = response.choices[0]?.message?.content ?? '[]'
-  return raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  return extractJson(raw)
 }
 
 export async function parseInvoiceFile(base64Content: string, mediaType: string): Promise<ParsedInvoiceLine[]> {
   const result = await callGpt(
-    'You are a hotel procurement assistant. Extract all line items from this invoice as a JSON array: [{raw_description, qty, unit, unit_price, total, supplier_name, invoice_date}]. Return ONLY valid JSON. No markdown, no preamble, no explanation.',
+    'You are a hotel procurement assistant. Extract all line items from this invoice as a JSON array: [{raw_description, qty, unit, unit_price, total, supplier_name, invoice_date}]. Return ONLY a valid JSON array. No markdown, no explanation, no extra text.',
     base64Content,
     mediaType,
-    'Parse this invoice data:'
+    'Parse this invoice:'
   )
   return JSON.parse(result)
 }
 
 export async function parseFbFile(base64Content: string, mediaType: string): Promise<ParsedFbLine[]> {
   const result = await callGpt(
-    'You are a restaurant sales analyst. Extract all sold items from this file as JSON: [{raw_name, qty, unit_price, total_revenue}]. Return ONLY valid JSON. No markdown, no preamble.',
+    'You are a restaurant sales analyst. Extract all sold items from this file as a JSON array: [{raw_name, qty}]. Return ONLY a valid JSON array. No markdown, no explanation, no extra text.',
     base64Content,
     mediaType,
     'Parse this F&B sales data:'

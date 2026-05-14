@@ -29,6 +29,7 @@ const navItems: NavItem[] = [
       { label: 'Nettoyage général', href: '/inventory/cleaning-general' },
       { label: 'Réunion',           href: '/inventory/meeting' },
       { label: 'Blanchisserie',     href: '/inventory/laundry' },
+      { label: 'Ingrédients',       href: '/inventory/ingredients' },
     ],
   },
   { label: 'Recettes',     href: '/recipes',              icon: <ChefHat size={16} />,      color: '#d97706' },

@@ -1,0 +1,9 @@
+name,sku,unit,packaging_desc,packaging_qty,price_excl_tax,min_stock,delivery_days,purchase_url,hotel_scope,category_name,supplier_name
+"Farine T55","ING-001","kg","Sac 25kg",25,0.85,50,3,"",both,"Farines","Metro"
+"Sucre semoule","ING-002","kg","Sac 50kg",50,0.70,30,3,"",both,"Sucres","Metro"
+"Beurre doux 500g","ING-003","pièce","Carton 20",20,2.20,20,2,"",both,"Produits laitiers","Pomona"
+"Œufs calibre M (boîte 30)","ING-004","boîte","Boîte 30",30,5.50,10,2,"",both,"Œufs","Pomona"
+"Crème liquide 1L","ING-005","litre","Carton 12",12,1.80,12,2,"",both,"Produits laitiers","Pomona"
+"Huile de tournesol 5L","ING-006","litre","Bidon 5L",5,7.50,10,3,"",both,"Huiles","Metro"
+"Sel fin 1kg","ING-007","kg","Sac 25kg",25,0.30,20,5,"",both,"Épices & condiments","Metro"
+"Poivre noir moulu 500g","ING-008","g","Boîte 500g",500,3.20,5,5,"",both,"Épices & condiments","Metro"

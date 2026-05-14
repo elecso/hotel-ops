@@ -368,6 +368,68 @@ returns text language sql security definer stable as $$
   select hotel_access from user_profiles where id = auth.uid()
 $$;
 
+-- Drop all existing policies first so this file is safe to re-run
+do $$ begin
+  -- read policies
+  drop policy if exists "authenticated_read" on daily_stats;
+  drop policy if exists "authenticated_read" on fb_imports;
+  drop policy if exists "authenticated_read" on fb_daily_sales;
+  drop policy if exists "authenticated_read" on events;
+  drop policy if exists "authenticated_read" on product_categories;
+  drop policy if exists "authenticated_read" on suppliers;
+  drop policy if exists "authenticated_read" on products;
+  drop policy if exists "authenticated_read" on product_room_typologies;
+  drop policy if exists "authenticated_read" on beverage_sub_products;
+  drop policy if exists "authenticated_read" on stock_months;
+  drop policy if exists "authenticated_read" on product_ai_mappings;
+  drop policy if exists "authenticated_read" on requisitions;
+  drop policy if exists "authenticated_read" on requisition_lines;
+  drop policy if exists "authenticated_read" on invoices;
+  drop policy if exists "authenticated_read" on invoice_lines;
+  drop policy if exists "authenticated_read" on recipes;
+  drop policy if exists "authenticated_read" on recipe_ingredients;
+  drop policy if exists "authenticated_read" on menu_items;
+  drop policy if exists "authenticated_read" on menu_item_sales;
+  drop policy if exists "authenticated_read" on logbook_news;
+  drop policy if exists "authenticated_read" on morning_meeting;
+  drop policy if exists "authenticated_read" on toilet_checks;
+  drop policy if exists "authenticated_read" on staff;
+  drop policy if exists "authenticated_read" on duty_roster;
+  -- user profile
+  drop policy if exists "own_profile_read" on user_profiles;
+  -- write policies
+  drop policy if exists "staff_write_fb_imports"    on fb_imports;
+  drop policy if exists "staff_write_fb_sales"      on fb_daily_sales;
+  drop policy if exists "staff_write_menu_sales"    on menu_item_sales;
+  drop policy if exists "staff_write_requisitions"  on requisitions;
+  drop policy if exists "staff_write_req_lines"     on requisition_lines;
+  drop policy if exists "staff_write_invoices"      on invoices;
+  drop policy if exists "staff_write_invoice_lines" on invoice_lines;
+  drop policy if exists "staff_write_mappings"      on product_ai_mappings;
+  drop policy if exists "staff_write_toilet"        on toilet_checks;
+  drop policy if exists "staff_write_events"        on events;
+  -- manager policies
+  drop policy if exists "manager_update_req"        on requisitions;
+  drop policy if exists "manager_update_req_lines"  on requisition_lines;
+  drop policy if exists "manager_update_invoices"   on invoices;
+  drop policy if exists "manager_update_inv_lines"  on invoice_lines;
+  -- admin policies
+  drop policy if exists "admin_stock_months"        on stock_months;
+  drop policy if exists "admin_products"            on products;
+  drop policy if exists "admin_categories"          on product_categories;
+  drop policy if exists "admin_suppliers"           on suppliers;
+  drop policy if exists "admin_recipes"             on recipes;
+  drop policy if exists "admin_recipe_ing"          on recipe_ingredients;
+  drop policy if exists "admin_menu_items"          on menu_items;
+  drop policy if exists "admin_user_profiles"       on user_profiles;
+  drop policy if exists "admin_staff"               on staff;
+  drop policy if exists "admin_duty_roster"         on duty_roster;
+  drop policy if exists "admin_bev_sub_products"    on beverage_sub_products;
+  -- logbook
+  drop policy if exists "logbook_news_write"        on logbook_news;
+  drop policy if exists "morning_mtg_write"         on morning_meeting;
+end $$;
+
 -- READ policies — all authenticated users can read most tables
 create policy "authenticated_read" on daily_stats        for select using (auth.role() = 'authenticated');
 create policy "authenticated_read" on fb_imports         for select using (auth.role() = 'authenticated');
@@ -417,20 +479,20 @@ create policy "manager_update_invoices"   on invoices for update using (get_my_r
 create policy "manager_update_inv_lines"  on invoice_lines for update using (get_my_role() in ('admin','manager'));
 
 -- Admin-only: stock_months write, products CRUD, user_profiles
-create policy "admin_stock_months"   on stock_months for all using (get_my_role() = 'admin');
-create policy "admin_products"       on products for all using (get_my_role() in ('admin','manager'));
-create policy "admin_categories"     on product_categories for all using (get_my_role() in ('admin','manager'));
-create policy "admin_suppliers"      on suppliers for all using (get_my_role() in ('admin','manager'));
-create policy "admin_recipes"        on recipes for all using (get_my_role() in ('admin','manager'));
-create policy "admin_recipe_ing"     on recipe_ingredients for all using (get_my_role() in ('admin','manager'));
-create policy "admin_menu_items"     on menu_items for all using (get_my_role() in ('admin','manager'));
-create policy "admin_user_profiles"  on user_profiles for all using (get_my_role() = 'admin');
-create policy "admin_staff"          on staff for all using (get_my_role() in ('admin','manager'));
-create policy "admin_duty_roster"    on duty_roster for all using (get_my_role() in ('admin','manager'));
+create policy "admin_stock_months"        on stock_months for all using (get_my_role() = 'admin');
+create policy "admin_products"            on products for all using (get_my_role() in ('admin','manager'));
+create policy "admin_categories"          on product_categories for all using (get_my_role() in ('admin','manager'));
+create policy "admin_suppliers"           on suppliers for all using (get_my_role() in ('admin','manager'));
+create policy "admin_recipes"             on recipes for all using (get_my_role() in ('admin','manager'));
+create policy "admin_recipe_ing"          on recipe_ingredients for all using (get_my_role() in ('admin','manager'));
+create policy "admin_menu_items"          on menu_items for all using (get_my_role() in ('admin','manager'));
+create policy "admin_user_profiles"       on user_profiles for all using (get_my_role() = 'admin');
+create policy "admin_staff"               on staff for all using (get_my_role() in ('admin','manager'));
+create policy "admin_duty_roster"         on duty_roster for all using (get_my_role() in ('admin','manager'));
 
 -- Logbook: writable by service role (n8n webhook) — in production use service role bypass
-create policy "logbook_news_write"   on logbook_news for insert with check (true);
-create policy "morning_mtg_write"    on morning_meeting for insert with check (true);
+create policy "logbook_news_write"        on logbook_news for insert with check (true);
+create policy "morning_mtg_write"         on morning_meeting for insert with check (true);
 
 -- ============================================================
 -- TRIGGER: auto-create user_profile on signup
@@ -454,3 +516,58 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_user();
+
+-- ============================================================
+-- MIGRATIONS — Safe to re-run
+-- ============================================================
+
+-- Add ingredient type to product_categories and products
+alter table product_categories drop constraint if exists product_categories_type_check;
+alter table product_categories add constraint product_categories_type_check
+  check (type in ('room','beverage','food','cleaning_fb','cleaning_general','meeting','laundry','ingredient'));
+
+alter table products drop constraint if exists products_type_check;
+alter table products add constraint products_type_check
+  check (type in ('room','beverage','food','cleaning_fb','cleaning_general','meeting','laundry','ingredient'));
+
+-- Beverage sub-products write policy (admins and managers)
+drop policy if exists "admin_bev_sub_products" on beverage_sub_products;
+create policy "admin_bev_sub_products" on beverage_sub_products
+  for all using (get_my_role() in ('admin','manager'));
+
+-- Purchase orders tables
+create table if not exists purchase_orders (
+  id           bigserial primary key,
+  created_by   uuid references auth.users(id),
+  created_at   timestamptz default now(),
+  status       text check (status in ('draft','ordered','received','cancelled')) default 'draft',
+  supplier_id  int references suppliers(id),
+  notes        text,
+  type         text
+);
+
+create table if not exists purchase_order_lines (
+  id                bigserial primary key,
+  purchase_order_id bigint not null references purchase_orders(id) on delete cascade,
+  product_id        int references products(id),
+  qty_ordered       numeric,
+  qty_received      numeric,
+  unit_price        numeric(10,2)
+);
+
+alter table purchase_orders       enable row level security;
+alter table purchase_order_lines  enable row level security;
+
+drop policy if exists "auth_read_purchase_orders"        on purchase_orders;
+drop policy if exists "auth_read_purchase_order_lines"   on purchase_order_lines;
+drop policy if exists "admin_write_purchase_orders"      on purchase_orders;
+drop policy if exists "admin_write_purchase_order_lines" on purchase_order_lines;
+
+create policy "auth_read_purchase_orders"
+  on purchase_orders for select using (auth.role() = 'authenticated');
+create policy "auth_read_purchase_order_lines"
+  on purchase_order_lines for select using (auth.role() = 'authenticated');
+create policy "admin_write_purchase_orders"
+  on purchase_orders for all using (get_my_role() in ('admin','manager'));
+create policy "admin_write_purchase_order_lines"
+  on purchase_order_lines for all using (get_my_role() in ('admin','manager'));

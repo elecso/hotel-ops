@@ -1,6 +1,6 @@
 export type Role = 'admin' | 'manager' | 'staff' | 'readonly'
 export type HotelAccess = 'mercure' | 'ibis' | 'both'
-export type ProductType = 'room' | 'beverage' | 'food' | 'cleaning_fb' | 'cleaning_general' | 'meeting' | 'laundry'
+export type ProductType = 'room' | 'beverage' | 'food' | 'cleaning_fb' | 'cleaning_general' | 'meeting' | 'laundry' | 'ingredient'
 export type RequisitionStatus = 'pending' | 'validated' | 'rejected'
 export type InvoiceStatus = 'pending' | 'ai_processed' | 'validated'
 export type EventType = 'meeting' | 'banqueting' | 'event'

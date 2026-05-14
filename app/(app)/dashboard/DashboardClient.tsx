@@ -153,178 +153,190 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
         </div>
       </div>
 
-      {/* Section 2 — Events of the day */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Événements du jour</CardTitle>
-            <Button variant="secondary" size="sm" onClick={() => setShowEventForm(v => !v)}>
-              <Plus size={14} /> Ajouter
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {/* Add event form */}
-          {showEventForm && (
-            <div className="px-5 py-4 border-b border-[#C5C0B1] bg-[#F4F2ED]/50 space-y-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Input
-                  placeholder="Nom de l'événement *"
-                  value={eventForm.event_name}
-                  onChange={e => setEventForm(f => ({ ...f, event_name: e.target.value }))}
-                  className="col-span-2"
-                />
-                <Input
-                  placeholder="Salle"
-                  value={eventForm.room}
-                  onChange={e => setEventForm(f => ({ ...f, room: e.target.value }))}
-                />
-                <Input
-                  placeholder="Personnes"
-                  type="number"
-                  value={eventForm.persons}
-                  onChange={e => setEventForm(f => ({ ...f, persons: e.target.value }))}
-                  min="0"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Select value={eventForm.type} onValueChange={v => setEventForm(f => ({ ...f, type: v }))}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={handleAddEvent} disabled={eventSaving || !eventForm.event_name}>
-                  {eventSaving ? 'Ajout…' : 'Ajouter'}
+      {/* Section 2+3 — Two-column: Events+Forecast LEFT, Yesterday RIGHT */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* LEFT column: Events + Forecast */}
+        <div className="space-y-6">
+          {/* Events */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Événements du jour</CardTitle>
+                <Button variant="secondary" size="sm" onClick={() => setShowEventForm(v => !v)}>
+                  <Plus size={14} /> Ajouter
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => setShowEventForm(false)}>Annuler</Button>
               </div>
-            </div>
-          )}
+            </CardHeader>
+            <CardContent className="p-0">
+              {showEventForm && (
+                <div className="px-5 py-4 border-b border-[#C5C0B1] bg-[#F4F2ED]/50 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Nom de l'événement *"
+                      value={eventForm.event_name}
+                      onChange={e => setEventForm(f => ({ ...f, event_name: e.target.value }))}
+                      className="col-span-2"
+                    />
+                    <Input
+                      placeholder="Salle"
+                      value={eventForm.room}
+                      onChange={e => setEventForm(f => ({ ...f, room: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Personnes"
+                      type="number"
+                      value={eventForm.persons}
+                      onChange={e => setEventForm(f => ({ ...f, persons: e.target.value }))}
+                      min="0"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select value={eventForm.type} onValueChange={v => setEventForm(f => ({ ...f, type: v }))}>
+                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={handleAddEvent} disabled={eventSaving || !eventForm.event_name}>
+                      {eventSaving ? 'Ajout…' : 'Ajouter'}
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setShowEventForm(false)}>Annuler</Button>
+                  </div>
+                </div>
+              )}
+              {events.length === 0 && !showEventForm ? (
+                <p className="px-5 py-4 text-sm" style={{ color: '#C5C0B1' }}>Aucun événement aujourd&apos;hui.</p>
+              ) : events.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Événement</TableHead>
+                      <TableHead>Salle</TableHead>
+                      <TableHead>Pers.</TableHead>
+                      <TableHead>Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events.map(ev => (
+                      <TableRow key={ev.id}>
+                        <TableCell className="font-medium">{ev.event_name}</TableCell>
+                        <TableCell>{ev.room ?? '—'}</TableCell>
+                        <TableCell>{ev.persons ?? '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={eventBadgeVariant[ev.type] ?? 'default'}>
+                            {ev.type === 'meeting' ? 'Réunion' : ev.type === 'banqueting' ? 'Banquet' : 'Événement'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
 
-          {events.length === 0 && !showEventForm ? (
-            <p className="px-5 py-4 text-sm" style={{ color: '#C5C0B1' }}>Aucun événement aujourd&apos;hui.</p>
-          ) : events.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Événement</TableHead>
-                  <TableHead>Salle</TableHead>
-                  <TableHead>Personnes</TableHead>
-                  <TableHead>Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map(ev => (
-                  <TableRow key={ev.id}>
-                    <TableCell className="font-medium">{ev.event_name}</TableCell>
-                    <TableCell>{ev.room ?? '—'}</TableCell>
-                    <TableCell>{ev.persons ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={eventBadgeVariant[ev.type] ?? 'default'}>
-                        {ev.type === 'meeting' ? 'Réunion' : ev.type === 'banqueting' ? 'Banquet' : 'Événement'}
-                      </Badge>
-                    </TableCell>
+          {/* 10-day forecast */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Prévisions — 10 prochains jours</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Mercure</TableHead>
+                    <TableHead>Ibis</TableHead>
+                    <TableHead>PDJ</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Section 3 — 10-day forecast */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Prévisions — 10 prochains jours</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Mercure Occ.</TableHead>
-                <TableHead>Ibis Occ.</TableHead>
-                <TableHead>Petits-déjeuners</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {forecast.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center" style={{ color: '#C5C0B1' }}>
-                    Aucune prévision disponible.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                (() => {
-                  const grouped: Record<string, { mercure?: ForecastOccupancy; ibis?: ForecastOccupancy }> = {}
-                  for (const f of forecast) {
-                    if (!grouped[f.forecast_date]) grouped[f.forecast_date] = {}
-                    grouped[f.forecast_date][f.hotel_id as 'mercure' | 'ibis'] = f
-                  }
-                  return Object.entries(grouped).map(([date, hotels]) => (
-                    <TableRow
-                      key={date}
-                      className={date === selectedDate ? 'bg-[#602460]/10' : ''}
-                    >
-                      <TableCell className={`font-medium ${date === selectedDate ? 'text-[#602460] font-semibold' : ''}`}>
-                        {formatDate(date)}
-                        {date === today && <span className="ml-2 text-[10px] text-[#602460] font-semibold">AUJOURD&apos;HUI</span>}
-                      </TableCell>
-                      <TableCell style={{ color: '#602460' }}>
-                        {hotels.mercure ? formatPct(hotels.mercure.occupancy_pct) : '—'}
-                      </TableCell>
-                      <TableCell style={{ color: '#E8003D' }}>
-                        {hotels.ibis ? formatPct(hotels.ibis.occupancy_pct) : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {(hotels.mercure?.breakfast_covers ?? 0) + (hotels.ibis?.breakfast_covers ?? 0) || '—'}
+                </TableHeader>
+                <TableBody>
+                  {forecast.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center" style={{ color: '#C5C0B1' }}>
+                        Aucune prévision disponible.
                       </TableCell>
                     </TableRow>
-                  ))
-                })()
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  ) : (
+                    (() => {
+                      const grouped: Record<string, { mercure?: ForecastOccupancy; ibis?: ForecastOccupancy }> = {}
+                      for (const f of forecast) {
+                        if (!grouped[f.forecast_date]) grouped[f.forecast_date] = {}
+                        grouped[f.forecast_date][f.hotel_id as 'mercure' | 'ibis'] = f
+                      }
+                      return Object.entries(grouped).slice(0, 10).map(([forecastDate, hotels]) => (
+                        <TableRow
+                          key={forecastDate}
+                          className={forecastDate === selectedDate ? 'bg-[#602460]/10' : ''}
+                        >
+                          <TableCell className={`font-medium text-xs ${forecastDate === selectedDate ? 'text-[#602460] font-semibold' : ''}`}>
+                            {formatDate(forecastDate)}
+                            {forecastDate === today && <span className="ml-1 text-[9px] text-[#602460] font-semibold">AUJ.</span>}
+                          </TableCell>
+                          <TableCell style={{ color: '#602460' }} className="text-xs">
+                            {hotels.mercure ? formatPct(hotels.mercure.occupancy_pct) : '—'}
+                          </TableCell>
+                          <TableCell style={{ color: '#E8003D' }} className="text-xs">
+                            {hotels.ibis ? formatPct(hotels.ibis.occupancy_pct) : '—'}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {(hotels.mercure?.breakfast_covers ?? 0) + (hotels.ibis?.breakfast_covers ?? 0) || '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    })()
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Section 4 — Yesterday's results from daily_stats */}
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
-          Résultats J-1 — {formatDate(new Date(new Date(selectedDate).getTime() - 86400000))}
-        </h3>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
-          <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} compact />
-          <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} compact />
-          <MetricCard hotel="neutral" label="PDJ Total"
-            value={(mercureYesterday?.breakfast_covers ?? 0) + (ibisYesterday?.breakfast_covers ?? 0)}
-            compact
-          />
-          <MetricCard hotel="neutral" label="Déjeuner"
-            value={mercureYesterday?.lunch_covers ?? '—'}
-            compact
-          />
-          <MetricCard hotel="mercure" label="Dîner Mercure"
-            value={mercureYesterday?.dinner_mercure_covers ?? '—'}
-            compact
-          />
-          <MetricCard hotel="ibis" label="Dîner Ibis"
-            value={ibisYesterday?.dinner_ibis_covers ?? '—'}
-            compact
-          />
-          <MetricCard hotel="neutral" label="Banq. Déjeuner"
-            value={mercureYesterday?.banquet_lunch_covers ?? '—'}
-            compact
-          />
-          <MetricCard hotel="neutral" label="Banq. Dîner"
-            value={mercureYesterday?.banquet_dinner_covers ?? '—'}
-            compact
-          />
-          <MetricCard hotel="neutral" label="Room Service"
-            value={mercureYesterday?.room_service_revenue ? `${mercureYesterday.room_service_revenue.toFixed(0)} €` : '—'}
-            compact
-          />
+        {/* RIGHT column: Yesterday's results */}
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
+            Résultats J-1 — {formatDate(new Date(new Date(selectedDate).getTime() - 86400000))}
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} compact />
+            <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} compact />
+            <MetricCard hotel="mercure" label="Arr. / Dép. Mercure"
+              value={mercureYesterday ? `${mercureYesterday.arrivals ?? 0} / ${mercureYesterday.departures ?? 0}` : '—'}
+              compact
+            />
+            <MetricCard hotel="ibis" label="Arr. / Dép. Ibis"
+              value={ibisYesterday ? `${ibisYesterday.arrivals ?? 0} / ${ibisYesterday.departures ?? 0}` : '—'}
+              compact
+            />
+            <MetricCard hotel="neutral" label="PDJ Total"
+              value={(mercureYesterday?.breakfast_covers ?? 0) + (ibisYesterday?.breakfast_covers ?? 0)}
+              compact
+            />
+            <MetricCard hotel="neutral" label="Déjeuner"
+              value={mercureYesterday?.lunch_covers ?? '—'}
+              compact
+            />
+            <MetricCard hotel="mercure" label="Dîner Mercure"
+              value={mercureYesterday?.dinner_mercure_covers ?? '—'}
+              compact
+            />
+            <MetricCard hotel="ibis" label="Dîner Ibis"
+              value={ibisYesterday?.dinner_ibis_covers ?? '—'}
+              compact
+            />
+            <MetricCard hotel="neutral" label="Banq. Déjeuner"
+              value={mercureYesterday?.banquet_lunch_covers ?? '—'}
+              compact
+            />
+            <MetricCard hotel="neutral" label="Banq. Dîner"
+              value={mercureYesterday?.banquet_dinner_covers ?? '—'}
+              compact
+            />
+            <MetricCard hotel="neutral" label="Room Service"
+              value={mercureYesterday?.room_service_revenue ? `${mercureYesterday.room_service_revenue.toFixed(0)} €` : '—'}
+              compact
+            />
+          </div>
         </div>
       </div>
     </div>

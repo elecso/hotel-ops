@@ -4,21 +4,20 @@
   --font-sans: 'Inter', 'Helvetica Neue', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
 
-  /* Mercure brand palette */
-  --color-mercure-purple:       #602460;
-  --color-mercure-purple-dark:  #3D1640;
-  --color-mercure-purple-light: #7E3A7E;
-  --color-mercure-sand:         #DFDBCF;
-  --color-mercure-sand-dark:    #C5C0B1;
-  --color-mercure-sand-light:   #F4F2ED;
-  --color-ibis-red:             #E8003D;
-  --color-ibis-red-light:       #FDEAEF;
-  --color-text-on-purple:       #FFFFFF;
-  --color-text-on-sand:         #3D1640;
+  /* Dark colorful palette */
+  --color-brand-violet:       #a855f7;
+  --color-brand-violet-dark:  #7c22b8;
+  --color-brand-violet-light: #c084fc;
+  --color-brand-cyan:         #22d3ee;
+  --color-brand-emerald:      #4ade80;
+  --color-brand-amber:        #fbbf24;
+  --color-brand-rose:         #f87171;
+  --color-brand-orange:       #fb923c;
+  --color-ibis-red:           #f43f5e;
+  --color-ibis-red-light:     #2a0a14;
 
-  /* Override default background */
-  --color-background: #F4F2ED;
-  --color-foreground: #3D1640;
+  --color-background: #07071a;
+  --color-foreground: #e2e2f0;
 }
 
 :root {
@@ -30,8 +29,8 @@
 }
 
 body {
-  background: #F4F2ED;
-  color: #3D1640;
+  background: #07071a;
+  color: #e2e2f0;
   font-family: 'Inter', 'Helvetica Neue', sans-serif;
   font-weight: 400;
   line-height: 1.625;
@@ -42,8 +41,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.025em;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F4F2ED; }
-::-webkit-scrollbar-thumb { background: #C5C0B1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #602460; }
+::-webkit-scrollbar-track { background: #0e0e24; }
+::-webkit-scrollbar-thumb { background: #2d2d55; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a855f7; }

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import type { ProductType, Supplier, ProductCategory, RoomType } from '@/lib/types'
 import { Plus, Trash2 } from 'lucide-react'
 
@@ -41,7 +40,6 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
   const [selectedRoomTypes, setSelectedRoomTypes] = useState<number[]>([])
   const [subProducts, setSubProducts] = useState<SubProductDraft[]>([])
 
-  // Inline creation state
   const [localSuppliers, setLocalSuppliers] = useState(suppliers)
   const [localCategories, setLocalCategories] = useState(categories)
   const [showNewSupplier, setShowNewSupplier] = useState(false)
@@ -146,7 +144,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
         </DialogHeader>
 
         <div className="px-6 py-4 space-y-4">
-          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+          {error && <div className="text-sm text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/30 rounded px-3 py-2">{error}</div>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
@@ -157,6 +155,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
               <Label>SKU / Référence</Label>
               <Input value={form.sku} onChange={set('sku')} placeholder="REF-001" />
             </div>
+
             <div className="space-y-1.5">
               <Label>Fournisseur</Label>
               <div className="flex items-center gap-1">
@@ -171,7 +170,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 <button
                   type="button"
                   onClick={() => setShowNewSupplier(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#C5C0B1] bg-white text-[#602460] hover:bg-[#602460] hover:text-white transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
                   title="Nouveau fournisseur"
                 >+</button>
               </div>
@@ -182,17 +181,13 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                     value={newSupplierName}
                     onChange={e => setNewSupplierName(e.target.value)}
                     className="flex-1 h-8 text-xs"
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateSupplier() }}
                   />
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 text-xs"
-                    disabled={!newSupplierName}
-                    onClick={handleCreateSupplier}
-                  >Créer</Button>
+                  <Button type="button" size="sm" className="h-8 text-xs" disabled={!newSupplierName} onClick={handleCreateSupplier}>Créer</Button>
                 </div>
               )}
             </div>
+
             <div className="space-y-1.5">
               <Label>Catégorie</Label>
               <div className="flex items-center gap-1">
@@ -209,7 +204,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 <button
                   type="button"
                   onClick={() => setShowNewCategory(v => !v)}
-                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#C5C0B1] bg-white text-[#602460] hover:bg-[#602460] hover:text-white transition-colors text-lg font-bold"
+                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
                   title="Nouvelle catégorie"
                 >+</button>
               </div>
@@ -220,17 +215,13 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                     value={newCategoryName}
                     onChange={e => setNewCategoryName(e.target.value)}
                     className="flex-1 h-8 text-xs"
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateCategory() }}
                   />
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 text-xs"
-                    disabled={!newCategoryName}
-                    onClick={handleCreateCategory}
-                  >Créer</Button>
+                  <Button type="button" size="sm" className="h-8 text-xs" disabled={!newCategoryName} onClick={handleCreateCategory}>Créer</Button>
                 </div>
               )}
             </div>
+
             <div className="space-y-1.5">
               <Label>Unité</Label>
               <Input value={form.unit} onChange={set('unit')} placeholder="pcs, kg, L..." />
@@ -274,7 +265,6 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
             )}
           </div>
 
-          {/* Room typologies */}
           {type === 'room' && filteredRoomTypes.length > 0 && (
             <div className="space-y-2">
               <Label>Typologies de chambre</Label>
@@ -286,8 +276,8 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                     onClick={() => toggleRoomType(rt.id)}
                     className={`text-xs px-3 py-1 rounded-full border transition-colors ${
                       selectedRoomTypes.includes(rt.id)
-                        ? 'bg-[#602460] text-white border-[#602460]'
-                        : 'bg-white text-[#602460] border-[#C5C0B1] hover:border-[#602460]'
+                        ? 'bg-[#a855f7] text-white border-[#a855f7]'
+                        : 'bg-[#0e0e24] text-[#a855f7] border-[#252548] hover:border-[#a855f7]'
                     }`}
                   >
                     {rt.code} — {rt.label}
@@ -297,7 +287,6 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
             </div>
           )}
 
-          {/* Beverage sub-products */}
           {type === 'beverage' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -307,29 +296,11 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
                 </Button>
               </div>
               {subProducts.map((sp, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded border border-[#C5C0B1]">
-                  <Input
-                    placeholder="Nom (ex: Verre 25cl)"
-                    value={sp.name}
-                    onChange={e => updateSubProduct(i, 'name', e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input
-                    placeholder="Volume (cl)"
-                    value={sp.volume_cl}
-                    onChange={e => updateSubProduct(i, 'volume_cl', e.target.value)}
-                    type="number"
-                    className="w-24"
-                  />
-                  <Input
-                    placeholder="Facteur"
-                    value={sp.decrement_factor}
-                    onChange={e => updateSubProduct(i, 'decrement_factor', e.target.value)}
-                    type="number"
-                    step="0.01"
-                    className="w-24"
-                  />
-                  <button onClick={() => removeSubProduct(i)} className="text-red-500 hover:text-red-700">
+                <div key={i} className="flex items-center gap-2 p-2 rounded border border-[#252548] bg-[#0e0e24]">
+                  <Input placeholder="Nom (ex: Verre 25cl)" value={sp.name} onChange={e => updateSubProduct(i, 'name', e.target.value)} className="flex-1" />
+                  <Input placeholder="Volume (cl)" value={sp.volume_cl} onChange={e => updateSubProduct(i, 'volume_cl', e.target.value)} type="number" className="w-24" />
+                  <Input placeholder="Facteur" value={sp.decrement_factor} onChange={e => updateSubProduct(i, 'decrement_factor', e.target.value)} type="number" step="0.01" className="w-24" />
+                  <button onClick={() => removeSubProduct(i)} className="text-[#f87171] hover:text-[#ef4444]">
                     <Trash2 size={14} />
                   </button>
                 </div>

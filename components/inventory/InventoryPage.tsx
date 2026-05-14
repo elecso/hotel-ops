@@ -49,18 +49,60 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
       .eq('is_active', true)
       .order('name')
 
+    const productIds = (products ?? []).map((p: Product) => p.id)
+
     const { data: stockData } = await supabase
       .from('stock_months')
       .select('*')
       .eq('month', m)
-      .in('product_id', (products ?? []).map((p: Product) => p.id))
+      .in('product_id', productIds)
 
-    const newRows = (products ?? []).map((p: Product) => {
+    // Auto-populate opening_stock from previous month's theoretical stock
+    // for products that have no entry for the selected month yet
+    const missingIds = productIds.filter(
+      (id: number) => !stockData?.find((s: StockMonth) => s.product_id === id)
+    )
+
+    if (missingIds.length > 0) {
+      const d = new Date(m)
+      const prevD = new Date(d.getFullYear(), d.getMonth() - 1, 1)
+      const prevMonth = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, '0')}-01`
+
+      const { data: prevStock } = await supabase
+        .from('stock_months')
+        .select('*')
+        .eq('month', prevMonth)
+        .in('product_id', missingIds)
+
+      if (prevStock && prevStock.length > 0) {
+        const inserts = prevStock.map((ps: StockMonth) => ({
+          product_id: ps.product_id,
+          month: m,
+          opening_stock: Math.max(0, (ps.opening_stock ?? 0) + (ps.bought ?? 0) - (ps.used ?? 0)),
+          bought: 0,
+          used: 0,
+        }))
+        await supabase.from('stock_months').upsert(inserts, { onConflict: 'product_id,month', ignoreDuplicates: true })
+
+        const { data: refreshed } = await supabase
+          .from('stock_months')
+          .select('*')
+          .eq('month', m)
+          .in('product_id', productIds)
+
+        setRows((products ?? []).map((p: Product) => {
+          const stock = refreshed?.find((s: StockMonth) => s.product_id === p.id) ?? null
+          return { product: p, stock, theoretical: (stock?.opening_stock ?? 0) + (stock?.bought ?? 0) - (stock?.used ?? 0) }
+        }))
+        setLoading(false)
+        return
+      }
+    }
+
+    setRows((products ?? []).map((p: Product) => {
       const stock = stockData?.find((s: StockMonth) => s.product_id === p.id) ?? null
-      const theoretical = (stock?.opening_stock ?? 0) + (stock?.bought ?? 0) - (stock?.used ?? 0)
-      return { product: p, stock, theoretical }
-    })
-    setRows(newRows)
+      return { product: p, stock, theoretical: (stock?.opening_stock ?? 0) + (stock?.bought ?? 0) - (stock?.used ?? 0) }
+    }))
     setLoading(false)
   }, [type, supabase])
 
@@ -85,7 +127,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
               ))}
             </SelectContent>
           </Select>
-          {loading && <span className="text-sm" style={{ color: '#C5C0B1' }}>Chargement…</span>}
+          {loading && <span className="text-sm text-[#4a4a6a]">Chargement…</span>}
         </div>
         {isAdmin && (
           <Button onClick={() => setShowModal(true)}>
@@ -94,7 +136,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
         )}
       </div>
 
-      <div className="bg-white rounded-[10px] border border-[#C5C0B1] overflow-hidden">
+      <div className="bg-[#14142b] rounded-[10px] border border-[#252548] overflow-hidden">
         <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} />
       </div>
 

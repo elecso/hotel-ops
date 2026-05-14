@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Plus, Trash2, ClipboardCheck } from 'lucide-react'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { Plus, Trash2, ClipboardCheck, ChevronDown, ChevronRight, Check, X } from 'lucide-react'
+import { formatDate, formatCurrency, currentMonth } from '@/lib/utils'
 import Link from 'next/link'
 
 const TYPES = ['room', 'beverage', 'food', 'cleaning_fb', 'cleaning_general', 'meeting', 'laundry']
@@ -31,13 +31,21 @@ interface Product {
 }
 interface ReqLine { product_id: string; qty: string }
 
+interface RequisitionLine {
+  id: number
+  product: { name: string; unit: string } | null
+  qty_requested: number
+  qty_validated: number | null
+  product_id?: number
+}
+
 interface Requisition {
   id: number
   request_date: string
   status: string
   type: string
   notes: string
-  lines: { id: number; product: { name: string; unit: string } | null; qty_requested: number; qty_validated: number }[]
+  lines: RequisitionLine[]
 }
 
 interface Props {
@@ -61,8 +69,13 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const supabase = createClient()
 
+  // Inline validation state
+  const [expanded, setExpanded] = useState<number[]>([])
+  const [lineQty, setLineQty] = useState<Record<number, string>>({})
+  const [processing, setProcessing] = useState<number | null>(null)
+
+  const supabase = createClient()
   const filteredProducts = products.filter(p => !type || p.type === type)
   const canValidate = role === 'admin' || role === 'manager'
 
@@ -71,8 +84,46 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
   const updateLine = (i: number, key: keyof ReqLine, val: string) =>
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, [key]: val } : l))
 
-  const getSelectedProduct = (productId: string) =>
-    products.find(p => String(p.id) === productId)
+  const getSelectedProduct = (productId: string) => products.find(p => String(p.id) === productId)
+
+  const toggleExpand = (id: number) =>
+    setExpanded(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  const getValidatedQty = (line: RequisitionLine) =>
+    lineQty[line.id] !== undefined ? lineQty[line.id] : String(line.qty_requested)
+
+  const handleApprove = async (req: Requisition) => {
+    setProcessing(req.id)
+    const month = currentMonth()
+    for (const line of req.lines) {
+      const qtyVal = parseFloat(getValidatedQty(line))
+      if (isNaN(qtyVal) || qtyVal <= 0) continue
+      await supabase.from('requisition_lines').update({ qty_validated: qtyVal }).eq('id', line.id)
+      if (line.product_id) {
+        await supabase.from('stock_months').upsert(
+          { product_id: line.product_id, month, bought: 0, opening_stock: 0, used: 0 },
+          { onConflict: 'product_id,month', ignoreDuplicates: true }
+        )
+        const { data: sm } = await supabase
+          .from('stock_months').select('bought')
+          .eq('product_id', line.product_id).eq('month', month).single()
+        await supabase.from('stock_months').update({ bought: (sm?.bought ?? 0) + qtyVal })
+          .eq('product_id', line.product_id).eq('month', month)
+      }
+    }
+    await supabase.from('requisitions').update({ status: 'validated' }).eq('id', req.id)
+    setRequisitions(prev => prev.map(r => r.id === req.id ? { ...r, status: 'validated' } : r))
+    setExpanded(prev => prev.filter(x => x !== req.id))
+    setProcessing(null)
+  }
+
+  const handleReject = async (reqId: number) => {
+    setProcessing(reqId)
+    await supabase.from('requisitions').update({ status: 'rejected' }).eq('id', reqId)
+    setRequisitions(prev => prev.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r))
+    setExpanded(prev => prev.filter(x => x !== reqId))
+    setProcessing(null)
+  }
 
   const handleSubmit = async () => {
     setSaving(true)
@@ -83,8 +134,7 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
     const { data: req, error: rErr } = await supabase
       .from('requisitions')
       .insert({ requested_by: userId, type, notes, status: 'pending' })
-      .select()
-      .single()
+      .select().single()
 
     if (rErr || !req) { setError(rErr?.message ?? 'Erreur'); setSaving(false); return }
 
@@ -113,7 +163,6 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
 
   return (
     <div className="max-w-4xl space-y-6">
-      {/* Link to validation page for admin/manager */}
       {canValidate && (
         <Link href="/requisitions/validate">
           <Button variant="secondary" className="flex items-center gap-2">
@@ -128,11 +177,11 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
         <CardHeader><CardTitle>Nouvelle réquisition</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {success && (
-            <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+            <div className="text-sm text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/30 rounded px-3 py-2">
               Réquisition soumise avec succès.
             </div>
           )}
-          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+          {error && <div className="text-sm text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/30 rounded px-3 py-2">{error}</div>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -161,7 +210,7 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                     <select
                       value={line.product_id}
                       onChange={e => updateLine(i, 'product_id', e.target.value)}
-                      className="flex-1 h-9 rounded-[6px] border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
+                      className="flex-1 h-9 rounded-[6px] border border-[#252548] bg-[#0e0e24] px-3 text-sm text-[#e2e2f0] focus:outline-none focus:ring-2 focus:ring-[#a855f7]"
                     >
                       <option value="">Sélectionner un produit…</option>
                       {filteredProducts.map(p => (
@@ -178,21 +227,20 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                       step="0.1"
                     />
                     {lines.length > 1 && (
-                      <button onClick={() => removeLine(i)} className="text-red-500 hover:text-red-700">
+                      <button onClick={() => removeLine(i)} className="text-[#f87171] hover:text-[#ef4444]">
                         <Trash2 size={14} />
                       </button>
                     )}
                   </div>
-                  {/* Product details */}
                   {selectedProduct && (
-                    <div className="flex items-center gap-3 pl-1 text-[11px]" style={{ color: '#C5C0B1' }}>
+                    <div className="flex items-center gap-3 pl-1 text-[11px] text-[#4a4a6a]">
                       {selectedProduct.price_excl_tax != null && (
-                        <span>Prix: <span className="font-semibold text-[#602460]">{formatCurrency(selectedProduct.price_excl_tax)}</span></span>
+                        <span>Prix: <span className="font-semibold text-[#22d3ee]">{formatCurrency(selectedProduct.price_excl_tax)}</span></span>
                       )}
                       {selectedProduct.packaging_desc && (
-                        <span>Cond.: <span className="font-semibold text-[#3D1640]">{selectedProduct.packaging_desc}</span></span>
+                        <span>Cond.: <span className="font-semibold text-[#e2e2f0]">{selectedProduct.packaging_desc}</span></span>
                       )}
-                      <span>Unité: <span className="font-semibold text-[#3D1640]">{selectedProduct.unit}</span></span>
+                      <span>Unité: <span className="font-semibold text-[#e2e2f0]">{selectedProduct.unit}</span></span>
                     </div>
                   )}
                 </div>
@@ -216,37 +264,109 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
         </CardContent>
       </Card>
 
-      {/* History */}
+      {/* History with inline validation for admin/manager */}
       <Card>
         <CardHeader><CardTitle>Mes réquisitions récentes</CardTitle></CardHeader>
         <CardContent className="p-0">
           {requisitions.length === 0 ? (
-            <p className="px-5 py-4 text-sm" style={{ color: '#C5C0B1' }}>Aucune réquisition.</p>
+            <p className="px-5 py-4 text-sm text-[#4a4a6a]">Aucune réquisition.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Lignes</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requisitions.map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell>{formatDate(r.request_date)}</TableCell>
-                    <TableCell>{TYPE_LABELS[r.type] ?? r.type}</TableCell>
-                    <TableCell className="font-mono">{r.lines?.length ?? 0}</TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANT[r.status] ?? 'default'}>
-                        {r.status === 'pending' ? 'En attente' : r.status === 'validated' ? 'Validée' : 'Rejetée'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="divide-y divide-[#252548]">
+              {requisitions.map(r => {
+                const isPending = r.status === 'pending'
+                const isOpen = expanded.includes(r.id)
+                const canExpand = canValidate && isPending
+
+                return (
+                  <div key={r.id}>
+                    <div
+                      className={`flex items-center justify-between px-5 py-3 ${canExpand ? 'cursor-pointer hover:bg-[#1e1e38] transition-colors' : ''}`}
+                      onClick={() => canExpand && toggleExpand(r.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {canExpand && (
+                          isOpen
+                            ? <ChevronDown size={14} className="text-[#a855f7]" />
+                            : <ChevronRight size={14} className="text-[#4a4a6a]" />
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-[#e2e2f0] font-medium">{formatDate(r.request_date)}</span>
+                            <span className="text-[#4a4a6a]">·</span>
+                            <span className="text-[#8080a8]">{TYPE_LABELS[r.type] ?? r.type}</span>
+                            <span className="text-[#4a4a6a]">·</span>
+                            <span className="font-mono text-[#4a4a6a] text-xs">{r.lines?.length ?? 0} ligne(s)</span>
+                          </div>
+                          {r.notes && <p className="text-[11px] text-[#4a4a6a] mt-0.5 italic">{r.notes}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={STATUS_VARIANT[r.status] ?? 'default'}>
+                          {r.status === 'pending' ? 'En attente' : r.status === 'validated' ? 'Validée' : 'Rejetée'}
+                        </Badge>
+                        {canExpand && isPending && (
+                          <span className="text-[11px] text-[#4a4a6a]">cliquez pour valider</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Inline validation panel */}
+                    {isOpen && isPending && (
+                      <div className="border-t border-[#252548] bg-[#0e0e24]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Produit</TableHead>
+                              <TableHead>Demandé</TableHead>
+                              <TableHead>Qté validée</TableHead>
+                              <TableHead>Unité</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {r.lines.map(line => (
+                              <TableRow key={line.id}>
+                                <TableCell>{line.product?.name ?? '—'}</TableCell>
+                                <TableCell className="font-mono text-[#8080a8]">{line.qty_requested}</TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    value={getValidatedQty(line)}
+                                    onChange={e => setLineQty(prev => ({ ...prev, [line.id]: e.target.value }))}
+                                    className="h-7 w-20 text-xs"
+                                    min="0"
+                                    step="0.1"
+                                  />
+                                </TableCell>
+                                <TableCell className="font-mono text-xs text-[#4a4a6a]">
+                                  {line.product?.unit ?? ''}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        <div className="flex items-center gap-2 px-4 py-3">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={e => { e.stopPropagation(); handleReject(r.id) }}
+                            disabled={processing === r.id}
+                          >
+                            <X size={14} /> Rejeter
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={e => { e.stopPropagation(); handleApprove(r) }}
+                            disabled={processing === r.id}
+                          >
+                            <Check size={14} /> Approuver
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

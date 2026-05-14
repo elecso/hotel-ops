@@ -88,18 +88,9 @@ create table if not exists events (
 
 -- ============================================================
 -- FORECAST (schema-qualified)
+-- See supabase/forecast.sql for the full forecast schema.
+-- Run forecast.sql separately after this file.
 -- ============================================================
-create schema if not exists forecast;
-
-create table if not exists forecast.occupancy (
-  id              bigserial primary key,
-  forecast_date   date not null,
-  hotel_id        text not null,
-  occupancy_pct   numeric(5,2),
-  breakfast_covers int,
-  created_at      timestamptz default now(),
-  unique(forecast_date, hotel_id)
-);
 
 -- ============================================================
 -- PRODUCT CATEGORIES
@@ -363,7 +354,7 @@ alter table toilet_checks       enable row level security;
 alter table staff               enable row level security;
 alter table duty_roster         enable row level security;
 alter table user_profiles       enable row level security;
-alter table forecast.occupancy  enable row level security;
+-- forecast.* RLS is handled in supabase/forecast.sql
 
 -- Helper function to get current user role
 create or replace function get_my_role()
@@ -402,7 +393,7 @@ create policy "authenticated_read" on morning_meeting    for select using (auth.
 create policy "authenticated_read" on toilet_checks      for select using (auth.role() = 'authenticated');
 create policy "authenticated_read" on staff              for select using (auth.role() = 'authenticated');
 create policy "authenticated_read" on duty_roster        for select using (auth.role() = 'authenticated');
-create policy "authenticated_read" on forecast.occupancy for select using (auth.role() = 'authenticated');
+-- forecast.* read policy is in supabase/forecast.sql
 
 -- user_profiles: users can read their own; admins can read all
 create policy "own_profile_read" on user_profiles for select using (id = auth.uid() or get_my_role() = 'admin');

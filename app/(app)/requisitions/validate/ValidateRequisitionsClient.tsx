@@ -47,40 +47,28 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
   const toggleExpand = (id: number) =>
     setExpanded(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
-  const setQty = (lineId: number, val: string) =>
-    setLineQty(prev => ({ ...prev, [lineId]: val }))
-
   const getQty = (line: ReqLine) =>
     lineQty[line.id] !== undefined ? lineQty[line.id] : String(line.qty_requested)
 
   const handleApprove = async (req: Requisition) => {
     setProcessing(req.id)
     const month = currentMonth()
-
     for (const line of req.lines) {
       const qtyVal = parseFloat(getQty(line))
       if (isNaN(qtyVal) || qtyVal <= 0) continue
-
       await supabase.from('requisition_lines').update({ qty_validated: qtyVal }).eq('id', line.id)
-
       if (line.product_id) {
         await supabase.from('stock_months').upsert(
           { product_id: line.product_id, month, bought: 0, opening_stock: 0, used: 0 },
           { onConflict: 'product_id,month', ignoreDuplicates: true }
         )
         const { data: sm } = await supabase
-          .from('stock_months')
-          .select('bought')
-          .eq('product_id', line.product_id)
-          .eq('month', month)
-          .single()
-
-        await supabase.from('stock_months').update({
-          bought: (sm?.bought ?? 0) + qtyVal
-        }).eq('product_id', line.product_id).eq('month', month)
+          .from('stock_months').select('bought')
+          .eq('product_id', line.product_id).eq('month', month).single()
+        await supabase.from('stock_months').update({ bought: (sm?.bought ?? 0) + qtyVal })
+          .eq('product_id', line.product_id).eq('month', month)
       }
     }
-
     await supabase.from('requisitions').update({ status: 'validated' }).eq('id', req.id)
     setRequisitions(prev => prev.filter(r => r.id !== req.id))
     setProcessing(null)
@@ -97,7 +85,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-sm" style={{ color: '#C5C0B1' }}>Aucune réquisition en attente de validation.</p>
+          <p className="text-sm text-[#4a4a6a]">Aucune réquisition en attente de validation.</p>
         </CardContent>
       </Card>
     )
@@ -115,13 +103,15 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
                   onClick={() => toggleExpand(req.id)}
                   className="flex items-center gap-3 flex-1 text-left"
                 >
-                  {isOpen ? <ChevronDown size={16} style={{ color: '#602460' }} /> : <ChevronRight size={16} style={{ color: '#602460' }} />}
+                  {isOpen
+                    ? <ChevronDown size={16} className="text-[#a855f7]" />
+                    : <ChevronRight size={16} className="text-[#4a4a6a]" />}
                   <div>
                     <div className="flex items-center gap-2">
                       <CardTitle>{req.requester?.full_name ?? 'Utilisateur'}</CardTitle>
                       <Badge variant="pending">En attente</Badge>
                     </div>
-                    <p className="text-xs mt-0.5" style={{ color: '#C5C0B1' }}>
+                    <p className="text-xs mt-0.5 text-[#4a4a6a]">
                       {formatDate(req.request_date)} — {TYPE_LABELS[req.type] ?? req.type} — {req.lines.length} ligne(s)
                     </p>
                   </div>
@@ -150,7 +140,7 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
               <CardContent className="p-0">
                 {req.notes && (
                   <div className="px-5 pb-2">
-                    <p className="text-xs italic" style={{ color: '#C5C0B1' }}>Note: {req.notes}</p>
+                    <p className="text-xs italic text-[#4a4a6a]">Note: {req.notes}</p>
                   </div>
                 )}
                 <Table>
@@ -166,18 +156,18 @@ export function ValidateRequisitionsClient({ requisitions: initial }: Props) {
                     {req.lines.map(line => (
                       <TableRow key={line.id}>
                         <TableCell>{line.product?.name ?? '—'}</TableCell>
-                        <TableCell className="font-mono">{line.qty_requested}</TableCell>
+                        <TableCell className="font-mono text-[#8080a8]">{line.qty_requested}</TableCell>
                         <TableCell>
                           <Input
                             type="number"
                             value={getQty(line)}
-                            onChange={e => setQty(line.id, e.target.value)}
+                            onChange={e => setLineQty(prev => ({ ...prev, [line.id]: e.target.value }))}
                             className="h-7 w-20 text-xs"
                             min="0"
                             step="0.1"
                           />
                         </TableCell>
-                        <TableCell className="font-mono text-xs" style={{ color: '#C5C0B1' }}>
+                        <TableCell className="font-mono text-xs text-[#4a4a6a]">
                           {line.product?.unit ?? ''}
                         </TableCell>
                       </TableRow>

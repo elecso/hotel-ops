@@ -23,8 +23,7 @@ export default async function DashboardPage({
     supabase.from('daily_stats').select('*').eq('stat_date', yesterday),
     supabase.from('events').select('*').eq('event_date', selectedDate).order('event_name'),
     supabase
-      .schema('forecast')
-      .from('occupancy')
+      .from('forecast_occupancy')
       .select('*')
       .gte('forecast_date', selectedDate)
       .order('forecast_date')

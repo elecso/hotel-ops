@@ -4,19 +4,19 @@ import { cn } from '@/lib/utils'
 type BadgeVariant = 'mercure' | 'ibis' | 'pending' | 'validated' | 'rejected' | 'meeting' | 'banqueting' | 'event' | 'admin' | 'manager' | 'staff' | 'readonly' | 'default'
 
 const variantClasses: Record<BadgeVariant, string> = {
-  mercure:    'bg-[#602460] text-white',
-  ibis:       'bg-[#E8003D] text-white',
-  pending:    'bg-amber-100 text-amber-700',
-  validated:  'bg-green-100 text-green-700',
-  rejected:   'bg-red-100 text-red-700',
-  meeting:    'bg-[#602460] text-white',
-  banqueting: 'bg-[#DFDBCF] text-[#3D1640]',
-  event:      'bg-[#E8003D] text-white',
-  admin:      'bg-[#3D1640] text-white',
-  manager:    'bg-[#602460] text-white',
-  staff:      'bg-[#DFDBCF] text-[#3D1640]',
-  readonly:   'bg-gray-100 text-gray-600',
-  default:    'bg-[#DFDBCF] text-[#3D1640]',
+  mercure:    'bg-[#a855f7] text-white',
+  ibis:       'bg-[#f43f5e] text-white',
+  pending:    'bg-[#fbbf24]/15 text-[#fbbf24] border border-[#fbbf24]/30',
+  validated:  'bg-[#4ade80]/15 text-[#4ade80] border border-[#4ade80]/30',
+  rejected:   'bg-[#f87171]/15 text-[#f87171] border border-[#f87171]/30',
+  meeting:    'bg-[#22d3ee]/15 text-[#22d3ee] border border-[#22d3ee]/30',
+  banqueting: 'bg-[#fb923c]/15 text-[#fb923c] border border-[#fb923c]/30',
+  event:      'bg-[#f43f5e]/15 text-[#f43f5e] border border-[#f43f5e]/30',
+  admin:      'bg-[#a855f7] text-white',
+  manager:    'bg-[#22d3ee]/15 text-[#22d3ee] border border-[#22d3ee]/30',
+  staff:      'bg-[#252548] text-[#8080a8]',
+  readonly:   'bg-[#1a1a35] text-[#4a4a6a]',
+  default:    'bg-[#252548] text-[#8080a8]',
 }
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

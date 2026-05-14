@@ -30,6 +30,19 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
     purchase_url: '', hotel_scope: 'both' as 'mercure' | 'ibis' | 'both',
   })
 
+  // Inline creation state
+  const [localSuppliers, setLocalSuppliers] = useState(suppliers)
+  const [localCategories, setLocalCategories] = useState(categories)
+  const [showNewSupplier, setShowNewSupplier] = useState(false)
+  const [showNewCategory, setShowNewCategory] = useState(false)
+  const [newSupplierName, setNewSupplierName] = useState('')
+  const [newCategoryName, setNewCategoryName] = useState('')
+
+  useEffect(() => {
+    setLocalSuppliers(suppliers)
+    setLocalCategories(categories)
+  }, [suppliers, categories])
+
   useEffect(() => {
     if (product) {
       setForm({
@@ -51,6 +64,28 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
+
+  const handleCreateSupplier = async () => {
+    if (!newSupplierName) return
+    const { data } = await supabase.from('suppliers').insert({ name: newSupplierName }).select().single()
+    if (data) {
+      setLocalSuppliers(prev => [...prev, data])
+      setForm(f => ({ ...f, supplier_id: String(data.id) }))
+      setNewSupplierName('')
+      setShowNewSupplier(false)
+    }
+  }
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName) return
+    const { data } = await supabase.from('product_categories').insert({ name: newCategoryName, type: product.type }).select().single()
+    if (data) {
+      setLocalCategories(prev => [...prev, data])
+      setForm(f => ({ ...f, category_id: String(data.id) }))
+      setNewCategoryName('')
+      setShowNewCategory(false)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -89,7 +124,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
         </DialogHeader>
 
         <div className="px-6 py-4 space-y-4">
-          {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
+          {error && <div className="text-sm text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/30 rounded px-3 py-2">{error}</div>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
@@ -100,26 +135,79 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
               <Label>SKU / Référence</Label>
               <Input value={form.sku} onChange={set('sku')} />
             </div>
+
+            {/* Fournisseur with inline creation */}
             <div className="space-y-1.5">
               <Label>Fournisseur</Label>
-              <Select value={form.supplier_id} onValueChange={v => setForm(f => ({ ...f, supplier_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <div className="flex-1">
+                  <Select value={form.supplier_id} onValueChange={v => setForm(f => ({ ...f, supplier_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                    <SelectContent>
+                      {localSuppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewSupplier(v => !v)}
+                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
+                  title="Nouveau fournisseur"
+                >+</button>
+              </div>
+              {showNewSupplier && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Input
+                    placeholder="Nom du fournisseur"
+                    value={newSupplierName}
+                    onChange={e => setNewSupplierName(e.target.value)}
+                    className="flex-1 h-8 text-xs"
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateSupplier() }}
+                  />
+                  <Button type="button" size="sm" className="h-8 text-xs" disabled={!newSupplierName} onClick={handleCreateSupplier}>
+                    Créer
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {/* Catégorie with inline creation */}
             <div className="space-y-1.5">
               <Label>Catégorie</Label>
-              <Select value={form.category_id} onValueChange={v => setForm(f => ({ ...f, category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                <SelectContent>
-                  {categories.filter(c => c.type === product.type).map(c => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <div className="flex-1">
+                  <Select value={form.category_id} onValueChange={v => setForm(f => ({ ...f, category_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                    <SelectContent>
+                      {localCategories.filter(c => c.type === product.type).map(c => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategory(v => !v)}
+                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#252548] bg-[#0e0e24] text-[#a855f7] hover:bg-[#1e1050] transition-colors text-lg font-bold"
+                  title="Nouvelle catégorie"
+                >+</button>
+              </div>
+              {showNewCategory && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Input
+                    placeholder="Nom de la catégorie"
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    className="flex-1 h-8 text-xs"
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateCategory() }}
+                  />
+                  <Button type="button" size="sm" className="h-8 text-xs" disabled={!newCategoryName} onClick={handleCreateCategory}>
+                    Créer
+                  </Button>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1.5">
               <Label>Unité</Label>
               <Input value={form.unit} onChange={set('unit')} />

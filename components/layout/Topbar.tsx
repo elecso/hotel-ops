@@ -4,23 +4,23 @@ import { Badge } from '@/components/ui/badge'
 import type { UserProfile } from '@/lib/types'
 
 const routeLabels: Record<string, string> = {
-  '/dashboard': 'Tableau de bord',
-  '/logbook': 'Logbook',
-  '/inventory/rooms': 'Inventaire — Chambres',
-  '/inventory/beverages': 'Inventaire — Boissons',
-  '/inventory/food': 'Inventaire — Alimentation',
-  '/inventory/cleaning-fb': 'Inventaire — Nettoyage F&B',
+  '/dashboard':                  'Tableau de bord',
+  '/logbook':                    'Logbook',
+  '/inventory/rooms':            'Inventaire — Chambres',
+  '/inventory/beverages':        'Inventaire — Boissons',
+  '/inventory/food':             'Inventaire — Alimentation',
+  '/inventory/cleaning-fb':      'Inventaire — Nettoyage F&B',
   '/inventory/cleaning-general': 'Inventaire — Nettoyage général',
-  '/inventory/meeting': 'Inventaire — Réunion',
-  '/inventory/laundry': 'Inventaire — Blanchisserie',
-  '/recipes': 'Recettes',
-  '/duty-roster': 'Tableau de service',
-  '/duty-roster/cost': 'Coûts & Statistiques',
-  '/upload-fb': 'Upload F&B',
-  '/requisitions': 'Réquisitions',
-  '/requisitions/validate': 'Valider les réquisitions',
-  '/invoices': 'Factures',
-  '/users': 'Utilisateurs',
+  '/inventory/meeting':          'Inventaire — Réunion',
+  '/inventory/laundry':          'Inventaire — Blanchisserie',
+  '/recipes':                    'Recettes',
+  '/duty-roster':                'Tableau de service',
+  '/duty-roster/cost':           'Coûts & Statistiques',
+  '/upload-fb':                  'Upload F&B',
+  '/requisitions':               'Réquisitions',
+  '/requisitions/validate':      'Valider les réquisitions',
+  '/invoices':                   'Factures',
+  '/users':                      'Utilisateurs',
 }
 
 interface TopbarProps {
@@ -38,14 +38,14 @@ export function Topbar({ user }: TopbarProps) {
 
   return (
     <header
-      className="flex items-center justify-between px-6 h-14 border-b"
-      style={{ background: '#F4F2ED', borderColor: '#C5C0B1', flexShrink: 0 }}
+      className="flex items-center justify-between px-6 h-14 border-b flex-shrink-0"
+      style={{ background: '#0e0e24', borderColor: '#1e1e3c' }}
     >
-      <h1 className="text-base font-semibold tracking-tight" style={{ color: '#602460' }}>
+      <h1 className="text-base font-semibold tracking-tight text-[#e2e2f0]">
         {title}
       </h1>
       <div className="flex items-center gap-4">
-        <span className="text-[13px] hidden sm:block" style={{ color: '#C5C0B1' }}>
+        <span className="text-[13px] hidden sm:block text-[#4a4a6a]">
           {todayCapitalized}
         </span>
         <div className="flex items-center gap-1.5">
@@ -55,7 +55,7 @@ export function Topbar({ user }: TopbarProps) {
         {user && (
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-            style={{ background: '#602460' }}
+            style={{ background: 'linear-gradient(135deg, #a855f7, #22d3ee)' }}
             title={user.full_name}
           >
             {user.full_name?.charAt(0)?.toUpperCase() ?? '?'}

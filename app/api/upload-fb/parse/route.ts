@@ -19,10 +19,14 @@ export async function POST(req: NextRequest) {
     if (isXlsx) {
       const lines = parseXlsxFbFile(arrayBuffer)
       if (lines.length > 0) return NextResponse.json(lines)
-      // Fall through to AI if parser found nothing
+      // XLSX parsed but found nothing — likely unrecognised headers, don't send binary to AI
+      return NextResponse.json(
+        { error: 'Colonnes non reconnues dans le fichier Excel. Vérifiez que les en-têtes contiennent "Nom" et une colonne de quantité (ex: "Quantités vendues brutes").' },
+        { status: 400 }
+      )
     }
 
-    // Fallback: AI parsing for PDF / CSV / unrecognized formats
+    // Fallback: AI parsing for PDF / CSV / plain-text formats only
     const base64 = Buffer.from(arrayBuffer).toString('base64')
     const mediaType = file.type || 'application/octet-stream'
     const lines = await parseFbFile(base64, mediaType)

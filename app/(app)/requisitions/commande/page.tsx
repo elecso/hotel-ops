@@ -14,8 +14,8 @@ export default async function CommandePage() {
     supabase
       .from('purchase_orders')
       .select('*, lines:purchase_order_lines(*, product:products(name, unit))')
-      .eq('ordered_by', user?.id ?? '')
-      .order('order_date', { ascending: false })
+      .eq('created_by', user?.id ?? '')
+      .order('created_at', { ascending: false })
       .limit(20),
   ])
 

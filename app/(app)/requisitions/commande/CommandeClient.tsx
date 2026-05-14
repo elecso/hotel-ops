@@ -25,7 +25,7 @@ interface Product {
 }
 interface OrderLine { product_id: string; qty: string }
 interface OrderRecord {
-  id: number; order_date: string; status: string; type: string; notes: string
+  id: number; created_at: string; order_date?: string; status: string; type: string; notes: string
   lines: { id: number; product: { name: string; unit: string } | null; qty_ordered: number; qty_received: number | null }[]
 }
 
@@ -68,16 +68,16 @@ export function CommandeClient({ products, orders: initial, userId }: Props) {
     if (validLines.length === 0) { setError('Ajoutez au moins une ligne.'); setSaving(false); return }
 
     const { data: order, error: oErr } = await supabase.from('purchase_orders')
-      .insert({ ordered_by: userId, type, notes, status: 'pending' }).select().single()
+      .insert({ created_by: userId, type, notes, status: 'ordered' }).select().single()
     if (oErr || !order) { setError(oErr?.message ?? 'Erreur'); setSaving(false); return }
 
     await supabase.from('purchase_order_lines').insert(
-      validLines.map(l => ({ order_id: order.id, product_id: parseInt(l.product_id), qty_ordered: parseFloat(l.qty) }))
+      validLines.map(l => ({ purchase_order_id: order.id, product_id: parseInt(l.product_id), qty_ordered: parseFloat(l.qty) }))
     )
 
     const { data: updated } = await supabase.from('purchase_orders')
       .select('*, lines:purchase_order_lines(*, product:products(name, unit))')
-      .eq('ordered_by', userId).order('order_date', { ascending: false }).limit(20)
+      .eq('created_by', userId).order('created_at', { ascending: false }).limit(20)
     setOrders(updated ?? [])
     setLines([{ product_id: '', qty: '' }])
     setNotes('')
@@ -209,7 +209,7 @@ export function CommandeClient({ products, orders: initial, userId }: Props) {
                         )}
                         <div>
                           <div className="flex items-center gap-2 text-sm">
-                            <span className="text-[#3D1640] font-medium">{formatDate(o.order_date)}</span>
+                            <span className="text-[#3D1640] font-medium">{formatDate(o.order_date ?? o.created_at)}</span>
                             <span className="text-[#B0A5B4]">·</span>
                             <span className="text-[#7B6B80]">{TYPE_LABELS[o.type] ?? o.type}</span>
                             <span className="text-[#B0A5B4]">·</span>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
-import { parseFbFile } from '@/lib/anthropic'
+import { parseFbFile } from '@/lib/openai'
 
 export async function POST(req: NextRequest) {
   try {

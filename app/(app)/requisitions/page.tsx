@@ -9,7 +9,7 @@ export default async function RequisitionsPage() {
   const [{ data: products }, { data: myRequisitions }] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, type, unit, supplier:suppliers(name)')
+      .select('id, name, type, unit, price_excl_tax, packaging_desc, supplier:suppliers(name)')
       .eq('is_active', true)
       .order('name'),
     supabase

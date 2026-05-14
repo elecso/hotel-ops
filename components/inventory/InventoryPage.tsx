@@ -95,7 +95,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
       </div>
 
       <div className="bg-white rounded-[10px] border border-[#C5C0B1] overflow-hidden">
-        <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} />
+        <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} />
       </div>
 
       <AddProductModal

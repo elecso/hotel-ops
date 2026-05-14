@@ -1,18 +1,22 @@
 'use client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/ui/card'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { formatDate, formatPct, isoDate } from '@/lib/utils'
-import type { DailyStat, FbDailySale, Event, ForecastOccupancy } from '@/lib/types'
+import { CalendarDays, Plus } from 'lucide-react'
+import type { DailyStat, Event, ForecastOccupancy } from '@/lib/types'
 
 interface Props {
   selectedDate: string
   todayStats: DailyStat[]
   yesterdayStats: DailyStat[]
-  todayFbSales: FbDailySale[]
-  yesterdayFbSales: FbDailySale[]
   todayEvents: Event[]
   forecast: ForecastOccupancy[]
 }
@@ -21,33 +25,60 @@ function getStat(stats: DailyStat[], hotelId: string) {
   return stats.find(s => s.hotel_id === hotelId)
 }
 
-function getSale(sales: FbDailySale[], outlet: string) {
-  return sales.find(s => s.outlet === outlet)
-}
-
 const eventBadgeVariant: Record<string, 'meeting' | 'banqueting' | 'event'> = {
   meeting: 'meeting',
   banqueting: 'banqueting',
   event: 'event',
 }
 
-export function DashboardClient({ selectedDate, todayStats, yesterdayStats, todayFbSales, yesterdayFbSales, todayEvents, forecast }: Props) {
+const EVENT_TYPES = [
+  { value: 'meeting', label: 'Réunion' },
+  { value: 'banqueting', label: 'Banquet' },
+  { value: 'event', label: 'Événement' },
+]
+
+export function DashboardClient({ selectedDate, todayStats, yesterdayStats, todayEvents: initialEvents, forecast }: Props) {
   const router = useRouter()
+  const supabase = createClient()
 
   const mercureToday = getStat(todayStats, 'mercure')
   const ibisToday = getStat(todayStats, 'ibis')
   const mercureYesterday = getStat(yesterdayStats, 'mercure')
   const ibisYesterday = getStat(yesterdayStats, 'ibis')
 
-  const bfMercure = todayStats.find(s => s.hotel_id === 'mercure')?.breakfast_covers ?? 0
-  const bfIbis = todayStats.find(s => s.hotel_id === 'ibis')?.breakfast_covers ?? 0
+  const bfMercure = mercureToday?.breakfast_covers ?? 0
+  const bfIbis = ibisToday?.breakfast_covers ?? 0
 
   const today = isoDate(new Date())
   const dateLabel = formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
+  // Event creation state
+  const [events, setEvents] = useState<Event[]>(initialEvents)
+  const [showEventForm, setShowEventForm] = useState(false)
+  const [eventForm, setEventForm] = useState({ event_name: '', room: '', persons: '', type: 'meeting' })
+  const [eventSaving, setEventSaving] = useState(false)
+
+  const handleAddEvent = async () => {
+    if (!eventForm.event_name) return
+    setEventSaving(true)
+    const { data, error } = await supabase.from('events').insert({
+      event_date: selectedDate,
+      event_name: eventForm.event_name,
+      room: eventForm.room || null,
+      persons: eventForm.persons ? parseInt(eventForm.persons) : null,
+      type: eventForm.type,
+    }).select().single()
+    if (!error && data) {
+      setEvents(prev => [...prev, data])
+      setEventForm({ event_name: '', room: '', persons: '', type: 'meeting' })
+      setShowEventForm(false)
+    }
+    setEventSaving(false)
+  }
+
   return (
     <div className="space-y-6 max-w-full">
-      {/* Header with date picker */}
+      {/* Header with date picker + today button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest font-medium mb-1" style={{ color: '#C5C0B1' }}>Données du</p>
@@ -55,68 +86,125 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
             {dateLabel}
           </h2>
         </div>
-        <input
-          type="date"
-          value={selectedDate}
-          max={today}
-          onChange={e => router.push(`/dashboard?date=${e.target.value}`)}
-          className="h-9 px-3 rounded-[6px] border border-[#C5C0B1] bg-white text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedDate}
+            max={today}
+            onChange={e => router.push(`/dashboard?date=${e.target.value}`)}
+            className="h-9 px-3 rounded-[6px] border border-[#C5C0B1] bg-white text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
+          />
+          {selectedDate !== today && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => router.push('/dashboard')}
+              className="flex items-center gap-1.5"
+            >
+              <CalendarDays size={14} />
+              Aujourd&apos;hui
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Section 1 — Today's key figures */}
+      {/* Section 1 — Today's key figures — compact single-row */}
       <div>
         <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
           Chiffres clés du jour
         </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
           <MetricCard
             hotel="mercure"
-            label="Mercure — Taux d'occupation"
+            label="Mercure Occ."
             value={mercureToday ? formatPct(mercureToday.occupancy_pct) : '—'}
+            compact
           />
           <MetricCard
             hotel="mercure"
-            label="Mercure — Arrivées / Départs"
-            value={mercureToday ? `${mercureToday.arrivals} / ${mercureToday.departures}` : '— / —'}
+            label="Mercure Arr./Dép."
+            value={mercureToday ? `${mercureToday.arrivals} / ${mercureToday.departures}` : '—'}
+            compact
           />
           <MetricCard
             hotel="ibis"
-            label="Ibis — Taux d'occupation"
+            label="Ibis Occ."
             value={ibisToday ? formatPct(ibisToday.occupancy_pct) : '—'}
+            compact
           />
           <MetricCard
             hotel="ibis"
-            label="Ibis — Arrivées / Départs"
-            value={ibisToday ? `${ibisToday.arrivals} / ${ibisToday.departures}` : '— / —'}
+            label="Ibis Arr./Dép."
+            value={ibisToday ? `${ibisToday.arrivals} / ${ibisToday.departures}` : '—'}
+            compact
           />
-        </div>
-        {/* Breakfast card */}
-        <div
-          className="px-5 py-4 rounded-[10px] border border-[#C5C0B1] bg-white"
-        >
-          <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: '#602460' }}>
-            Petits-déjeuners
-          </p>
-          <div className="flex items-center gap-6 text-lg font-bold font-mono">
-            <span style={{ color: '#602460' }}>Mercure: <span className="text-2xl">{bfMercure}</span></span>
-            <span className="text-[#C5C0B1]">|</span>
-            <span style={{ color: '#E8003D' }}>Ibis: <span className="text-2xl">{bfIbis}</span></span>
-            <span className="text-[#C5C0B1]">|</span>
-            <span style={{ color: '#3D1640' }}>Total: <span className="text-2xl">{bfMercure + bfIbis}</span></span>
-          </div>
+          <MetricCard
+            hotel="mercure"
+            label="PDJ Mercure"
+            value={bfMercure}
+            compact
+          />
+          <MetricCard
+            hotel="ibis"
+            label="PDJ Ibis"
+            value={bfIbis}
+            compact
+          />
         </div>
       </div>
 
       {/* Section 2 — Events of the day */}
       <Card>
         <CardHeader>
-          <CardTitle>Événements du jour</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Événements du jour</CardTitle>
+            <Button variant="secondary" size="sm" onClick={() => setShowEventForm(v => !v)}>
+              <Plus size={14} /> Ajouter
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {todayEvents.length === 0 ? (
-            <p className="px-5 py-4 text-sm" style={{ color: '#C5C0B1' }}>Aucun événement aujourd'hui.</p>
-          ) : (
+          {/* Add event form */}
+          {showEventForm && (
+            <div className="px-5 py-4 border-b border-[#C5C0B1] bg-[#F4F2ED]/50 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <Input
+                  placeholder="Nom de l'événement *"
+                  value={eventForm.event_name}
+                  onChange={e => setEventForm(f => ({ ...f, event_name: e.target.value }))}
+                  className="col-span-2"
+                />
+                <Input
+                  placeholder="Salle"
+                  value={eventForm.room}
+                  onChange={e => setEventForm(f => ({ ...f, room: e.target.value }))}
+                />
+                <Input
+                  placeholder="Personnes"
+                  type="number"
+                  value={eventForm.persons}
+                  onChange={e => setEventForm(f => ({ ...f, persons: e.target.value }))}
+                  min="0"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={eventForm.type} onValueChange={v => setEventForm(f => ({ ...f, type: v }))}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleAddEvent} disabled={eventSaving || !eventForm.event_name}>
+                  {eventSaving ? 'Ajout…' : 'Ajouter'}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setShowEventForm(false)}>Annuler</Button>
+              </div>
+            </div>
+          )}
+
+          {events.length === 0 && !showEventForm ? (
+            <p className="px-5 py-4 text-sm" style={{ color: '#C5C0B1' }}>Aucun événement aujourd&apos;hui.</p>
+          ) : events.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -127,7 +215,7 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {todayEvents.map(ev => (
+                {events.map(ev => (
                   <TableRow key={ev.id}>
                     <TableCell className="font-medium">{ev.event_name}</TableCell>
                     <TableCell>{ev.room ?? '—'}</TableCell>
@@ -181,7 +269,7 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
                     >
                       <TableCell className={`font-medium ${date === selectedDate ? 'text-[#602460] font-semibold' : ''}`}>
                         {formatDate(date)}
-                        {date === today && <span className="ml-2 text-[10px] text-[#602460] font-semibold">AUJOURD'HUI</span>}
+                        {date === today && <span className="ml-2 text-[10px] text-[#602460] font-semibold">AUJOURD&apos;HUI</span>}
                       </TableCell>
                       <TableCell style={{ color: '#602460' }}>
                         {hotels.mercure ? formatPct(hotels.mercure.occupancy_pct) : '—'}
@@ -201,37 +289,41 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
         </CardContent>
       </Card>
 
-      {/* Section 4 — Yesterday's results */}
+      {/* Section 4 — Yesterday's results from daily_stats */}
       <div>
         <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
           Résultats J-1 — {formatDate(new Date(new Date(selectedDate).getTime() - 86400000))}
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} />
-          <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} />
-          <MetricCard hotel="neutral" label="Petits-déjeuners"
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+          <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} compact />
+          <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} compact />
+          <MetricCard hotel="neutral" label="PDJ Total"
             value={(mercureYesterday?.breakfast_covers ?? 0) + (ibisYesterday?.breakfast_covers ?? 0)}
-          />
-          <MetricCard hotel="mercure" label="Dîner Mercure"
-            value={getSale(yesterdayFbSales, 'dinner')?.covers ?? '—'}
-            sub={getSale(yesterdayFbSales, 'dinner') ? `${getSale(yesterdayFbSales, 'dinner')!.revenue.toFixed(0)} €` : undefined}
-          />
-          <MetricCard hotel="ibis" label="Dîner Ibis"
-            value="—"
+            compact
           />
           <MetricCard hotel="neutral" label="Déjeuner"
-            value={getSale(yesterdayFbSales, 'lunch')?.covers ?? '—'}
-            sub={getSale(yesterdayFbSales, 'lunch') ? `${getSale(yesterdayFbSales, 'lunch')!.revenue.toFixed(0)} €` : undefined}
+            value={mercureYesterday?.lunch_covers ?? '—'}
+            compact
+          />
+          <MetricCard hotel="mercure" label="Dîner Mercure"
+            value={mercureYesterday?.dinner_mercure_covers ?? '—'}
+            compact
+          />
+          <MetricCard hotel="ibis" label="Dîner Ibis"
+            value={ibisYesterday?.dinner_ibis_covers ?? '—'}
+            compact
           />
           <MetricCard hotel="neutral" label="Banq. Déjeuner"
-            value={getSale(yesterdayFbSales, 'banqueting_lunch')?.covers ?? '—'}
+            value={mercureYesterday?.banquet_lunch_covers ?? '—'}
+            compact
           />
           <MetricCard hotel="neutral" label="Banq. Dîner"
-            value={getSale(yesterdayFbSales, 'banqueting_dinner')?.covers ?? '—'}
+            value={mercureYesterday?.banquet_dinner_covers ?? '—'}
+            compact
           />
           <MetricCard hotel="neutral" label="Room Service"
-            value={getSale(yesterdayFbSales, 'room_service')?.revenue?.toFixed(0) ?? '—'}
-            sub="€"
+            value={mercureYesterday?.room_service_revenue ? `${mercureYesterday.room_service_revenue.toFixed(0)} €` : '—'}
+            compact
           />
         </div>
       </div>

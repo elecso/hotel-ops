@@ -36,6 +36,20 @@ export interface DailyStat {
   arrivals: number
   departures: number
   breakfast_covers: number
+  rooms_sold_dba: number
+  rooms_sold_dbbz: number
+  rooms_sold_sgl: number
+  rooms_sold_twcz: number
+  rooms_sold_privm: number
+  rooms_sold_dbl: number
+  rooms_sold_twi: number
+  rooms_sold_han: number
+  lunch_covers: number
+  dinner_mercure_covers: number
+  dinner_ibis_covers: number
+  room_service_revenue: number
+  banquet_lunch_covers: number
+  banquet_dinner_covers: number
 }
 
 export interface FbDailySale {

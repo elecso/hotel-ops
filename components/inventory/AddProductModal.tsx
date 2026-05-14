@@ -41,6 +41,36 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
   const [selectedRoomTypes, setSelectedRoomTypes] = useState<number[]>([])
   const [subProducts, setSubProducts] = useState<SubProductDraft[]>([])
 
+  // Inline creation state
+  const [localSuppliers, setLocalSuppliers] = useState(suppliers)
+  const [localCategories, setLocalCategories] = useState(categories)
+  const [showNewSupplier, setShowNewSupplier] = useState(false)
+  const [showNewCategory, setShowNewCategory] = useState(false)
+  const [newSupplierName, setNewSupplierName] = useState('')
+  const [newCategoryName, setNewCategoryName] = useState('')
+
+  const handleCreateSupplier = async () => {
+    if (!newSupplierName) return
+    const { data } = await supabase.from('suppliers').insert({ name: newSupplierName }).select().single()
+    if (data) {
+      setLocalSuppliers(prev => [...prev, data])
+      setForm(f => ({ ...f, supplier_id: String(data.id) }))
+      setNewSupplierName('')
+      setShowNewSupplier(false)
+    }
+  }
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName) return
+    const { data } = await supabase.from('product_categories').insert({ name: newCategoryName, type }).select().single()
+    if (data) {
+      setLocalCategories(prev => [...prev, data])
+      setForm(f => ({ ...f, category_id: String(data.id) }))
+      setNewCategoryName('')
+      setShowNewCategory(false)
+    }
+  }
+
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
 
@@ -129,23 +159,77 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
             </div>
             <div className="space-y-1.5">
               <Label>Fournisseur</Label>
-              <Select value={form.supplier_id} onValueChange={v => setForm(f => ({ ...f, supplier_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <div className="flex-1">
+                  <Select value={form.supplier_id} onValueChange={v => setForm(f => ({ ...f, supplier_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                    <SelectContent>
+                      {localSuppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewSupplier(v => !v)}
+                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#C5C0B1] bg-white text-[#602460] hover:bg-[#602460] hover:text-white transition-colors text-lg font-bold"
+                  title="Nouveau fournisseur"
+                >+</button>
+              </div>
+              {showNewSupplier && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Input
+                    placeholder="Nom du fournisseur"
+                    value={newSupplierName}
+                    onChange={e => setNewSupplierName(e.target.value)}
+                    className="flex-1 h-8 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={!newSupplierName}
+                    onClick={handleCreateSupplier}
+                  >Créer</Button>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Catégorie</Label>
-              <Select value={form.category_id} onValueChange={v => setForm(f => ({ ...f, category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                <SelectContent>
-                  {categories.filter(c => c.type === type).map(c => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <div className="flex-1">
+                  <Select value={form.category_id} onValueChange={v => setForm(f => ({ ...f, category_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                    <SelectContent>
+                      {localCategories.filter(c => c.type === type).map(c => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategory(v => !v)}
+                  className="h-9 w-9 flex items-center justify-center rounded-[6px] border border-[#C5C0B1] bg-white text-[#602460] hover:bg-[#602460] hover:text-white transition-colors text-lg font-bold"
+                  title="Nouvelle catégorie"
+                >+</button>
+              </div>
+              {showNewCategory && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Input
+                    placeholder="Nom de la catégorie"
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    className="flex-1 h-8 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={!newCategoryName}
+                    onClick={handleCreateCategory}
+                  >Créer</Button>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Unité</Label>

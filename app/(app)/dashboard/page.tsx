@@ -16,15 +16,11 @@ export default async function DashboardPage({
   const [
     { data: todayStats },
     { data: yesterdayStats },
-    { data: todayFbSales },
-    { data: yesterdayFbSales },
     { data: todayEvents },
     { data: forecast },
   ] = await Promise.all([
     supabase.from('daily_stats').select('*').eq('stat_date', selectedDate),
     supabase.from('daily_stats').select('*').eq('stat_date', yesterday),
-    supabase.from('fb_daily_sales').select('*').eq('sale_date', selectedDate),
-    supabase.from('fb_daily_sales').select('*').eq('sale_date', yesterday),
     supabase.from('events').select('*').eq('event_date', selectedDate).order('event_name'),
     supabase
       .schema('forecast')
@@ -40,8 +36,6 @@ export default async function DashboardPage({
       selectedDate={selectedDate}
       todayStats={todayStats ?? []}
       yesterdayStats={yesterdayStats ?? []}
-      todayFbSales={todayFbSales ?? []}
-      yesterdayFbSales={yesterdayFbSales ?? []}
       todayEvents={todayEvents ?? []}
       forecast={forecast ?? []}
     />

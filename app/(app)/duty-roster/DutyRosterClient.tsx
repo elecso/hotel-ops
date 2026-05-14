@@ -70,20 +70,21 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
     const lines = csv.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length < 2) return
 
-    const header = lines[0].split(';')
-    // Find day columns: skip Service, Matricule, Nom, col_ignored
+    // Day columns are at indices 4-10 (Lu through Di)
     const dayStartIdx = 4
-    const dayEndIdx = header.findIndex(h => h.trim() === 'Tot.') - 1
-
-    const staffInserts: DutyRoster[] = []
+    const numDays = 7
 
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(';')
+      const service = cols[0]?.trim()
       const matricule = cols[1]?.trim()
       const nameFull = cols[2]?.trim()
-      const service = cols[0]?.trim()
+      const shiftCode = cols[3]?.trim()
 
-      if (!matricule || !nameFull) continue
+      if (!matricule || !nameFull || !shiftCode) continue
+
+      // Column 3: "M" = morning, "S" = afternoon/soir
+      const shift: 'morning' | 'afternoon' = shiftCode === 'M' ? 'morning' : 'afternoon'
 
       // Upsert staff
       const { data: staffRow } = await supabase
@@ -94,13 +95,10 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
 
       if (!staffRow) continue
 
-      // Determine shift from name suffix (M/S pattern)
-      const shift: 'morning' | 'afternoon' = nameFull.endsWith(' M') || cols[2]?.includes('M') ? 'morning' : 'afternoon'
-
-      for (let d = 0; d < 7; d++) {
+      for (let d = 0; d < numDays; d++) {
         const colIdx = dayStartIdx + d
         const value = cols[colIdx]?.trim()
-        if (!value || colIdx > dayEndIdx) continue
+        if (!value) continue
         const date = weekDates[d]
         if (date) {
           await supabase.from('duty_roster').upsert({
@@ -149,7 +147,7 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
 
       {/* Table */}
       <div className="bg-white rounded-[10px] border border-[#C5C0B1] overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm border-collapse table-fixed" style={{ minWidth: '800px' }}>
           <thead>
             <tr style={{ background: '#DFDBCF' }}>
               <th className="text-left px-4 py-2.5 font-semibold text-[#3D1640] sticky left-0 bg-[#DFDBCF] z-10 min-w-[180px]">

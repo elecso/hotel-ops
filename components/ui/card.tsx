@@ -37,9 +37,10 @@ interface MetricCardProps {
   sub?: string
   hotel?: 'mercure' | 'ibis' | 'neutral'
   icon?: React.ReactNode
+  compact?: boolean
 }
 
-export function MetricCard({ label, value, sub, hotel = 'neutral' }: MetricCardProps) {
+export function MetricCard({ label, value, sub, hotel = 'neutral', compact }: MetricCardProps) {
   const styles = {
     mercure: {
       wrapper: 'bg-white border-l-4 border-l-[#602460] border border-[#C5C0B1] rounded-[10px]',
@@ -56,10 +57,10 @@ export function MetricCard({ label, value, sub, hotel = 'neutral' }: MetricCardP
   }
   const s = styles[hotel]
   return (
-    <div className={`${s.wrapper} px-5 py-4`}>
-      <p className="text-xs font-medium text-[#602460] uppercase tracking-wide mb-1">{label}</p>
-      <p className={`text-2xl font-bold font-mono ${s.value}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+    <div className={`${s.wrapper} ${compact ? 'px-3 py-2.5' : 'px-5 py-4'}`}>
+      <p className={`font-medium text-[#602460] uppercase tracking-wide mb-0.5 ${compact ? 'text-[10px]' : 'text-xs mb-1'}`}>{label}</p>
+      <p className={`font-bold font-mono ${s.value} ${compact ? 'text-lg' : 'text-2xl'}`}>{value}</p>
+      {sub && <p className={`text-gray-500 mt-0.5 ${compact ? 'text-[10px]' : 'text-xs mt-1'}`}>{sub}</p>}
     </div>
   )
 }

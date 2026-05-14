@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Plus, Trash2 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Plus, Trash2, ClipboardCheck } from 'lucide-react'
+import { formatDate, formatCurrency } from '@/lib/utils'
+import Link from 'next/link'
 
 const TYPES = ['room', 'beverage', 'food', 'cleaning_fb', 'cleaning_general', 'meeting', 'laundry']
 const TYPE_LABELS: Record<string, string> = {
@@ -19,7 +20,15 @@ const TYPE_LABELS: Record<string, string> = {
   meeting: 'Réunion', laundry: 'Blanchisserie',
 }
 
-interface Product { id: number; name: string; type: string; unit: string; supplier?: { name: string } | null }
+interface Product {
+  id: number
+  name: string
+  type: string
+  unit: string
+  price_excl_tax: number | null
+  packaging_desc: string | null
+  supplier?: { name: string } | null
+}
 interface ReqLine { product_id: string; qty: string }
 
 interface Requisition {
@@ -55,11 +64,15 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
   const supabase = createClient()
 
   const filteredProducts = products.filter(p => !type || p.type === type)
+  const canValidate = role === 'admin' || role === 'manager'
 
   const addLine = () => setLines(prev => [...prev, { product_id: '', qty: '' }])
   const removeLine = (i: number) => setLines(prev => prev.filter((_, idx) => idx !== i))
   const updateLine = (i: number, key: keyof ReqLine, val: string) =>
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, [key]: val } : l))
+
+  const getSelectedProduct = (productId: string) =>
+    products.find(p => String(p.id) === productId)
 
   const handleSubmit = async () => {
     setSaving(true)
@@ -100,6 +113,16 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
 
   return (
     <div className="max-w-4xl space-y-6">
+      {/* Link to validation page for admin/manager */}
+      {canValidate && (
+        <Link href="/requisitions/validate">
+          <Button variant="secondary" className="flex items-center gap-2">
+            <ClipboardCheck size={16} />
+            Valider les réquisitions en attente
+          </Button>
+        </Link>
+      )}
+
       {/* Create form */}
       <Card>
         <CardHeader><CardTitle>Nouvelle réquisition</CardTitle></CardHeader>
@@ -130,34 +153,51 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                 <Plus size={14} /> Ajouter
               </Button>
             </div>
-            {lines.map((line, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select
-                  value={line.product_id}
-                  onChange={e => updateLine(i, 'product_id', e.target.value)}
-                  className="flex-1 h-9 rounded-[6px] border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
-                >
-                  <option value="">Sélectionner un produit…</option>
-                  {filteredProducts.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
-                  ))}
-                </select>
-                <Input
-                  type="number"
-                  placeholder="Qté"
-                  value={line.qty}
-                  onChange={e => updateLine(i, 'qty', e.target.value)}
-                  className="w-24"
-                  min="0"
-                  step="0.1"
-                />
-                {lines.length > 1 && (
-                  <button onClick={() => removeLine(i)} className="text-red-500 hover:text-red-700">
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
+            {lines.map((line, i) => {
+              const selectedProduct = getSelectedProduct(line.product_id)
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={line.product_id}
+                      onChange={e => updateLine(i, 'product_id', e.target.value)}
+                      className="flex-1 h-9 rounded-[6px] border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
+                    >
+                      <option value="">Sélectionner un produit…</option>
+                      {filteredProducts.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                      ))}
+                    </select>
+                    <Input
+                      type="number"
+                      placeholder="Qté"
+                      value={line.qty}
+                      onChange={e => updateLine(i, 'qty', e.target.value)}
+                      className="w-24"
+                      min="0"
+                      step="0.1"
+                    />
+                    {lines.length > 1 && (
+                      <button onClick={() => removeLine(i)} className="text-red-500 hover:text-red-700">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                  {/* Product details */}
+                  {selectedProduct && (
+                    <div className="flex items-center gap-3 pl-1 text-[11px]" style={{ color: '#C5C0B1' }}>
+                      {selectedProduct.price_excl_tax != null && (
+                        <span>Prix: <span className="font-semibold text-[#602460]">{formatCurrency(selectedProduct.price_excl_tax)}</span></span>
+                      )}
+                      {selectedProduct.packaging_desc && (
+                        <span>Cond.: <span className="font-semibold text-[#3D1640]">{selectedProduct.packaging_desc}</span></span>
+                      )}
+                      <span>Unité: <span className="font-semibold text-[#3D1640]">{selectedProduct.unit}</span></span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           <div className="space-y-1.5">

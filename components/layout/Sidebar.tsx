@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, BookOpen, Package, ChefHat, Calendar, Upload, ClipboardList, FileText, Users,
-  LogOut, ChevronDown, ChevronRight, TrendingUp, Shirt,
+  LogOut, ChevronDown, ChevronRight, TrendingUp, Shirt, BarChart2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -18,14 +18,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard', icon: <LayoutDashboard size={16} />, color: '#602460' },
-  {
-    label: 'Logbook', icon: <BookOpen size={16} />, color: '#16a34a', children: [
-      { label: 'Journal',      href: '/logbook' },
-      { label: 'Statistique',  href: '/logbook/statistique' },
-    ],
-  },
-  { label: 'Blanchisserie', href: '/laundry', icon: <Shirt size={16} />, color: '#0ea5e9' },
+  { label: 'Tableau de bord', href: '/dashboard',           icon: <LayoutDashboard size={16} />, color: '#602460' },
+  { label: 'Logbook',         href: '/logbook',             icon: <BookOpen size={16} />,        color: '#16a34a' },
+  { label: 'Statistique',     href: '/logbook/statistique', icon: <BarChart2 size={16} />,       color: '#0284c7' },
+  { label: 'Blanchisserie',   href: '/laundry',             icon: <Shirt size={16} />,           color: '#0ea5e9' },
   {
     label: 'Cost Control', icon: <TrendingUp size={16} />, color: '#0ea5e9', children: [
       { label: 'Stats F&B',  href: '/cost-control/stats-fb' },
@@ -47,13 +43,9 @@ const navItems: NavItem[] = [
       { label: 'Ingrédients',       href: '/inventory/ingredients' },
     ],
   },
-  { label: 'Recettes',     href: '/recipes',              icon: <ChefHat size={16} />,      color: '#d97706' },
-  {
-    label: 'Planning', icon: <Calendar size={16} />, color: '#0284c7', children: [
-      { label: 'Tableau de service', href: '/duty-roster' },
-    ],
-  },
-  { label: 'Upload F&B',    href: '/upload-fb',            icon: <Upload size={16} />,       color: '#e11d48' },
+  { label: 'Recettes',     href: '/recipes',   icon: <ChefHat size={16} />,      color: '#d97706' },
+  { label: 'Planning',     href: '/duty-roster', icon: <Calendar size={16} />,   color: '#0284c7' },
+  { label: 'Upload F&B',   href: '/upload-fb', icon: <Upload size={16} />,       color: '#e11d48' },
   {
     label: 'Réquisitions', icon: <ClipboardList size={16} />, color: '#0284c7', children: [
       { label: 'Créer',      href: '/requisitions' },
@@ -61,8 +53,8 @@ const navItems: NavItem[] = [
       { label: 'Valider',    href: '/requisitions/validate' },
     ],
   },
-  { label: 'Factures',     href: '/invoices',             icon: <FileText size={16} />,     color: '#16a34a' },
-  { label: 'Utilisateurs', href: '/users',                icon: <Users size={16} />,        color: '#7B6B80' },
+  { label: 'Factures',     href: '/invoices',  icon: <FileText size={16} />,     color: '#16a34a' },
+  { label: 'Utilisateurs', href: '/users',     icon: <Users size={16} />,        color: '#7B6B80' },
 ]
 
 interface SidebarProps {

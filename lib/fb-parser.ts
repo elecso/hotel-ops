@@ -55,7 +55,6 @@ export function parseXlsxFbFile(buffer: ArrayBuffer): ParsedFbLine[] {
     const qty = qtyCol >= 0 ? parseFloat(String(row[qtyCol] ?? '0').replace(',', '.')) : 0
 
     if (name.toLowerCase().includes('total') || name.toLowerCase().includes('sous-total')) continue
-    if (qty === 0) continue
 
     lines.push({
       raw_name: name,

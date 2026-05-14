@@ -25,6 +25,24 @@ function getStat(stats: DailyStat[], hotelId: string) {
   return stats.find(s => s.hotel_id === hotelId)
 }
 
+const CHIP = { borderRadius: 4, padding: '1px 8px', display: 'inline-block', fontWeight: 600 } as const
+
+function occColor(pct: number | null | undefined) {
+  if (pct == null) return {}
+  if (pct > 75) return { ...CHIP, background: '#fee2e2', color: '#991b1b' }
+  if (pct > 60) return { ...CHIP, background: '#ffedd5', color: '#9a3412' }
+  if (pct > 30) return { ...CHIP, background: '#dcfce7', color: '#166534' }
+  return { ...CHIP, background: '#dbeafe', color: '#1e40af' }
+}
+
+function bfColor(covers: number) {
+  if (covers <= 0) return {}
+  if (covers > 250) return { ...CHIP, background: '#fee2e2', color: '#991b1b' }
+  if (covers > 200) return { ...CHIP, background: '#ffedd5', color: '#9a3412' }
+  if (covers > 100) return { ...CHIP, background: '#dcfce7', color: '#166534' }
+  return { ...CHIP, background: '#dbeafe', color: '#1e40af' }
+}
+
 const eventBadgeVariant: Record<string, 'meeting' | 'banqueting' | 'event'> = {
   meeting: 'meeting',
   banqueting: 'banqueting',
@@ -267,14 +285,21 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
                             {formatDate(forecastDate)}
                             {forecastDate === today && <span className="ml-1 text-[9px] text-[#602460] font-semibold">AUJ.</span>}
                           </TableCell>
-                          <TableCell style={{ color: '#602460' }} className="text-xs">
-                            {hotels.mercure ? formatPct(hotels.mercure.occupancy_pct) : '—'}
-                          </TableCell>
-                          <TableCell style={{ color: '#E8003D' }} className="text-xs">
-                            {hotels.ibis ? formatPct(hotels.ibis.occupancy_pct) : '—'}
+                          <TableCell className="text-xs">
+                            <span style={occColor(hotels.mercure?.occupancy_pct)}>
+                              {hotels.mercure ? formatPct(hotels.mercure.occupancy_pct) : '—'}
+                            </span>
                           </TableCell>
                           <TableCell className="text-xs">
-                            {(hotels.mercure?.breakfast_covers ?? 0) + (hotels.ibis?.breakfast_covers ?? 0) || '—'}
+                            <span style={occColor(hotels.ibis?.occupancy_pct)}>
+                              {hotels.ibis ? formatPct(hotels.ibis.occupancy_pct) : '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {(() => {
+                              const covers = (hotels.mercure?.breakfast_covers ?? 0) + (hotels.ibis?.breakfast_covers ?? 0)
+                              return covers ? <span style={bfColor(covers)}>{covers}</span> : '—'
+                            })()}
                           </TableCell>
                         </TableRow>
                       ))

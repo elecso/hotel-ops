@@ -83,11 +83,12 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staf
       }, { onConflict: 'check_date,toilet_id,checked_by' })
       .select()
       .single()
-    if (!error && data) {
+    if (!error) {
+      const record = { ...(data ?? {}), check_date: selectedDate, toilet_id: toiletId, checked_by: name.trim(), check_time: now, validated: true }
       setChecks(prev => {
         const idx = prev.findIndex(c => c.toilet_id === toiletId && c.checked_by === name.trim())
-        if (idx >= 0) return prev.map((c, i) => i === idx ? data : c)
-        return [...prev, data]
+        if (idx >= 0) return prev.map((c, i) => i === idx ? record : c)
+        return [...prev, record as ToiletCheck]
       })
     }
     setValidatingToilet(null)

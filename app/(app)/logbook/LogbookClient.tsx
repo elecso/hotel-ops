@@ -72,7 +72,19 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staf
   const handleValidate = async (toiletId: number, name: string) => {
     if (!name.trim()) return
     const now = new Date().toISOString()
-    const { data, error } = await supabase
+
+    // Optimistic update — show in UI immediately regardless of DB result
+    const optimistic: ToiletCheck = { id: 0, check_date: selectedDate, toilet_id: toiletId as 1 | 2 | 3, checked_by: name.trim(), check_time: now, validated: true }
+    setChecks(prev => {
+      const idx = prev.findIndex(c => c.toilet_id === toiletId && c.checked_by === name.trim())
+      if (idx >= 0) return prev.map((c, i) => i === idx ? optimistic : c)
+      return [...prev, optimistic]
+    })
+    setValidatingToilet(null)
+    setCheckerName('')
+
+    // Persist to DB and replace optimistic record with real one
+    const { data } = await supabase
       .from('toilet_checks')
       .upsert({
         check_date: selectedDate,
@@ -83,16 +95,11 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staf
       }, { onConflict: 'check_date,toilet_id,checked_by' })
       .select()
       .single()
-    if (!error) {
-      const record = { ...(data ?? {}), check_date: selectedDate, toilet_id: toiletId, checked_by: name.trim(), check_time: now, validated: true }
-      setChecks(prev => {
-        const idx = prev.findIndex(c => c.toilet_id === toiletId && c.checked_by === name.trim())
-        if (idx >= 0) return prev.map((c, i) => i === idx ? record : c)
-        return [...prev, record as ToiletCheck]
-      })
+    if (data) {
+      setChecks(prev => prev.map(c =>
+        c.toilet_id === toiletId && c.checked_by === name.trim() ? { ...data, check_time: data.check_time ?? now } : c
+      ))
     }
-    setValidatingToilet(null)
-    setCheckerName('')
   }
 
   const formatTime = (iso: string | null | undefined) => {

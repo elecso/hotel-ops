@@ -248,6 +248,24 @@ export interface ToiletCheck {
   validated: boolean
 }
 
+export interface Tutorial {
+  id: number
+  category: 'technique' | 'fb' | 'rooms' | 'rh' | 'banquet'
+  title: string
+  description: string | null
+  file_url: string | null
+  created_at: string
+}
+
+export interface TutorialContact {
+  id: number
+  name: string
+  phone: string | null
+  email: string | null
+  other: string | null
+  created_at: string
+}
+
 export interface Staff {
   id: number
   matricule: string

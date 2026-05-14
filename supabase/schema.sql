@@ -581,3 +581,37 @@ ALTER TABLE daily_stats ADD COLUMN IF NOT EXISTS all_stars_count  int;
 
 -- Add occupancy target per hotel (default 80%)
 ALTER TABLE hotels ADD COLUMN IF NOT EXISTS occupancy_target numeric(5,2) DEFAULT 80;
+
+-- ============================================================
+-- TUTORIALS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tutorials (
+  id          bigserial primary key,
+  category    text not null check (category in ('technique','fb','rooms','rh','banquet')),
+  title       text not null,
+  description text,
+  file_url    text,
+  created_at  timestamptz default now()
+);
+ALTER TABLE tutorials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "auth_read_tutorials"  ON tutorials;
+DROP POLICY IF EXISTS "auth_write_tutorials" ON tutorials;
+CREATE POLICY "auth_read_tutorials"  ON tutorials FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "auth_write_tutorials" ON tutorials FOR ALL    USING (auth.role() = 'authenticated');
+
+-- ============================================================
+-- TUTORIAL CONTACTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tutorial_contacts (
+  id         bigserial primary key,
+  name       text not null,
+  phone      text,
+  email      text,
+  other      text,
+  created_at timestamptz default now()
+);
+ALTER TABLE tutorial_contacts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "auth_read_contacts"  ON tutorial_contacts;
+DROP POLICY IF EXISTS "auth_write_contacts" ON tutorial_contacts;
+CREATE POLICY "auth_read_contacts"  ON tutorial_contacts FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "auth_write_contacts" ON tutorial_contacts FOR ALL    USING (auth.role() = 'authenticated');

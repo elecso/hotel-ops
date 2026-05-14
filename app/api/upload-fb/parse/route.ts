@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { parseXlsxFbFile } from '@/lib/fb-parser'
+import { parseXlsxFbFile, xlsxToText } from '@/lib/fb-parser'
 import { parseFbFile } from '@/lib/openai'
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
-    const date = formData.get('date') as string | null
 
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
@@ -19,14 +18,21 @@ export async function POST(req: NextRequest) {
     if (isXlsx) {
       const lines = parseXlsxFbFile(arrayBuffer)
       if (lines.length > 0) return NextResponse.json(lines)
-      // XLSX parsed but found nothing — likely unrecognised headers, don't send binary to AI
-      return NextResponse.json(
-        { error: 'Colonnes non reconnues dans le fichier Excel. Vérifiez que les en-têtes contiennent "Nom" et une colonne de quantité (ex: "Quantités vendues brutes").' },
-        { status: 400 }
-      )
+
+      // XLSX parsed but found nothing — convert to CSV text and try AI
+      const csvText = xlsxToText(arrayBuffer)
+      if (!csvText.trim()) {
+        return NextResponse.json(
+          { error: 'Fichier Excel vide ou illisible.' },
+          { status: 400 }
+        )
+      }
+      const base64 = Buffer.from(csvText, 'utf-8').toString('base64')
+      const aiLines = await parseFbFile(base64, 'text/csv')
+      return NextResponse.json(aiLines)
     }
 
-    // Fallback: AI parsing for PDF / CSV / plain-text formats only
+    // PDF / CSV / plain text — AI parsing
     const base64 = Buffer.from(arrayBuffer).toString('base64')
     const mediaType = file.type || 'application/octet-stream'
     const lines = await parseFbFile(base64, mediaType)

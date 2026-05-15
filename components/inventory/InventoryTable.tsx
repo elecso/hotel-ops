@@ -169,8 +169,18 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
   const [localRows, setLocalRows] = useState<StockRow[]>(rows)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [expandedSubs, setExpandedSubs] = useState<number[]>([])
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const supabase = createClient()
 
   useEffect(() => { setLocalRows(rows) }, [rows])
+
+  const handleDelete = async (productId: number) => {
+    if (!confirm('Désactiver ce produit ? Il ne sera plus visible dans l\'inventaire.')) return
+    setDeletingId(productId)
+    await supabase.from('products').update({ is_active: false }).eq('id', productId)
+    setLocalRows(prev => prev.filter(r => r.product.id !== productId))
+    setDeletingId(null)
+  }
 
   const updateField = (productId: number, field: 'opening_stock' | 'used', value: number) => {
     setLocalRows(prev => prev.map(r => {
@@ -289,6 +299,16 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
                           title="Modifier le produit"
                         >
                           <Pencil size={14} />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          disabled={deletingId === product.id}
+                          className="text-[#B0A5B4] hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-40"
+                          title="Désactiver le produit"
+                        >
+                          <Trash2 size={14} />
                         </button>
                       )}
                       {product.purchase_url && (

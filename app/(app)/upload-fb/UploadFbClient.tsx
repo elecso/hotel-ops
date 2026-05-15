@@ -493,7 +493,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                 <TableBody>
                   {lines.map((line, i) => (
                     <TableRow key={i}>
-                      <TableCell className="font-mono text-xs max-w-[180px] truncate text-[#3D1640]">{line.raw_name}</TableCell>
+                      <TableCell className="font-mono text-xs text-[#3D1640] min-w-[240px]">{line.raw_name}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <select

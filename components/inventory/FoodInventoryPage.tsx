@@ -123,7 +123,6 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
           <TableHeader>
             <TableRow>
               <TableHead>Plat / Article</TableHead>
-              <TableHead>Outlet</TableHead>
               <TableHead className="text-right">Ventes ce mois</TableHead>
               {isAdmin && <TableHead className="w-10" />}
             </TableRow>
@@ -131,14 +130,13 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-[#B0A5B4] py-10">
+                <TableCell colSpan={3} className="text-center text-sm text-[#B0A5B4] py-10">
                   Aucun article. Ajoutez-en via le bouton ci-dessus ou créez-en lors d&apos;un F&B Upload.
                 </TableCell>
               </TableRow>
             ) : rows.map(row => (
               <TableRow key={row.id}>
                 <TableCell className="font-medium text-sm text-[#3D1640]">{row.name}</TableCell>
-                <TableCell className="text-sm text-[#7B6B80]">{OUTLET_LABELS[row.outlet] ?? row.outlet ?? '—'}</TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   {row.sales_mtd > 0
                     ? <span className="text-[#602460] font-semibold">{row.sales_mtd}</span>

@@ -221,7 +221,7 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
                   <TableBody>
                     {parsedLines.map((line, i) => (
                       <TableRow key={i}>
-                        <TableCell className="font-mono text-xs max-w-[140px] truncate">{line.raw_description}</TableCell>
+                        <TableCell className="font-mono text-xs min-w-[200px] break-words">{line.raw_description}</TableCell>
                         <TableCell>
                           <select
                             value={line.product_id ?? ''}

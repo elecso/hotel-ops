@@ -158,6 +158,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
   }
 
   const monthOptions = generateMonthOptions()
+  const relevantCategories = categories.filter(c => c.type === type)
   const filteredRows = filterCategory !== 'all'
     ? rows.filter(r => String(r.product?.category_id) === filterCategory)
     : rows
@@ -178,14 +179,14 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
               </SelectContent>
             </Select>
           )}
-          {categories.length > 0 && (
+          {relevantCategories.length > 0 && (
             <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="w-44">
                 <SelectValue placeholder="Toutes catégories" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes catégories</SelectItem>
-                {categories.map(c => (
+                {relevantCategories.map(c => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}
               </SelectContent>

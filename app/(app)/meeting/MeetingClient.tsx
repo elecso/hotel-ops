@@ -30,7 +30,7 @@ function EventCard({ ev }: { ev: Event }) {
     <div className="rounded-md border border-[#E5E2D8] bg-white px-3 py-2 text-xs space-y-0.5">
       <p className="font-semibold text-[#3D1640] truncate">{ev.event_name}</p>
       {ev.room && <p className="text-[#B0A5B4] truncate">{ev.room}</p>}
-      {ev.persons && <p className="text-[#7B6B80]">{ev.persons} pax</p>}
+      {ev.persons && <p className="text-[#7B6B80]">{ev.persons}</p>}
     </div>
   )
 }
@@ -159,7 +159,7 @@ export function MeetingClient({ today, events }: Props) {
                           <div key={ev.id} className="text-[11px] rounded px-2 py-1" style={{ background: COL[cat].bg, border: `1px solid ${COL[cat].border}` }}>
                             <p className="font-semibold text-[#3D1640] truncate">{ev.event_name}</p>
                             {ev.room && <p style={{ color: COL[cat].color }} className="truncate">{ev.room}</p>}
-                            {ev.persons && <p className="text-[#7B6B80]">{ev.persons} pax</p>}
+                            {ev.persons && <p className="text-[#7B6B80]">{ev.persons}</p>}
                           </div>
                         ))
                       }

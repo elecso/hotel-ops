@@ -45,45 +45,69 @@ Rules:
 - qty defaults to 1 if not shown; use 0 for unit_price/total if missing
 - raw_description must be the actual product name`
 
+async function callResponsesAPI(base64Content: string, mediaType: string, userText: string): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('OPENAI_API_KEY est manquant')
+
+  const ext = mediaType.includes('pdf') ? 'pdf' : mediaType.includes('png') ? 'png' : 'jpg'
+  const res = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      instructions: INVOICE_SYSTEM_PROMPT,
+      input: [
+        {
+          role: 'user',
+          content: [
+            { type: 'input_file', filename: `invoice.${ext}`, file_data: `data:${mediaType};base64,${base64Content}` },
+            { type: 'input_text', text: userText },
+          ],
+        },
+      ],
+      text: { format: { type: 'json_object' } },
+    }),
+  })
+
+  if (!res.ok) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errData: any = await res.json().catch(() => ({}))
+    throw new Error(errData?.error?.message ?? `OpenAI Responses API error ${res.status}`)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json()
+  return data.output_text ?? data.output?.[0]?.content?.[0]?.text ?? '{}'
+}
+
 export async function parseInvoiceFile(base64Content: string, mediaType: string): Promise<ParsedInvoiceLine[]> {
   const client = getOpenAI()
   const isPdf = mediaType.includes('pdf')
   const isImage = mediaType.startsWith('image/')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let userContent: any
+  let raw: string
 
-  if (isImage) {
-    userContent = [
-      { type: 'image_url', image_url: { url: `data:${mediaType};base64,${base64Content}`, detail: 'high' } },
-      { type: 'text', text: 'Extract all line items from this invoice.' },
-    ]
-  } else if (isPdf) {
-    // Extract readable text from the PDF buffer (works for non-scanned PDFs)
-    const rawBuf = Buffer.from(base64Content, 'base64')
-    const raw = rawBuf.toString('latin1')
-    // Keep printable ASCII + strip binary noise; grab up to 12 000 chars
-    const text = raw.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/[ \t]{4,}/g, '   ').substring(0, 12000)
-    userContent = `Extract all line items from this invoice.\n\nExtracted PDF text:\n${text}`
+  if (isPdf || isImage) {
+    // Responses API natively understands PDFs and images — no text extraction needed
+    raw = await callResponsesAPI(base64Content, mediaType, 'Extract all line items from this invoice.')
   } else {
-    // CSV / plain text
+    // CSV / plain text — Chat Completions is sufficient
     const rawBuf = Buffer.from(base64Content, 'base64')
     const utf8 = rawBuf.toString('utf-8')
     const text = utf8.includes('�') ? rawBuf.toString('latin1') : utf8
-    userContent = `Extract all line items from this invoice.\n\n${text}`
+
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 4096,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: INVOICE_SYSTEM_PROMPT },
+        { role: 'user', content: `Extract all line items from this invoice.\n\n${text}` },
+      ],
+    })
+    raw = response.choices[0]?.message?.content ?? '{}'
   }
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o',
-    max_tokens: 4096,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: INVOICE_SYSTEM_PROMPT },
-      { role: 'user', content: userContent },
-    ],
-  })
-
-  const raw = response.choices[0]?.message?.content ?? '{}'
   let parsed: { supplier_name?: string; invoice_date?: string; items?: Array<Record<string, unknown>> }
   try { parsed = JSON.parse(raw) } catch { return [] }
 

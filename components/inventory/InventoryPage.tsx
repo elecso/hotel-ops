@@ -38,7 +38,7 @@ function generateMonthOptions() {
 export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, suppliers, categories, roomTypes, isAdmin, salesOnly = false }: Props) {
   const [month, setMonth] = useState(monthProp ?? currentMonth())
   const [rows, setRows] = useState<AnyRow[]>(rowsProp)
-  const [filterCategory, setFilterCategory] = useState<string>('')
+  const [filterCategory, setFilterCategory] = useState<string>('all')
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [csvError, setCsvError] = useState('')
@@ -158,7 +158,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
   }
 
   const monthOptions = generateMonthOptions()
-  const filteredRows = filterCategory
+  const filteredRows = filterCategory !== 'all'
     ? rows.filter(r => String(r.product?.category_id) === filterCategory)
     : rows
 
@@ -184,7 +184,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
                 <SelectValue placeholder="Toutes catégories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes catégories</SelectItem>
+                <SelectItem value="all">Toutes catégories</SelectItem>
                 {categories.map(c => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}

@@ -64,8 +64,13 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
   const mercureYesterday = getStat(yesterdayStats, 'mercure')
   const ibisYesterday = getStat(yesterdayStats, 'ibis')
 
-  const bfMercure = mercureToday?.breakfast_covers ?? 0
-  const bfIbis = ibisToday?.breakfast_covers ?? 0
+  // Today's KPIs come from forecast_occupancy (more up-to-date than daily_stats)
+  const forecastToday = forecast.filter(f => f.forecast_date === selectedDate)
+  const mercureForecastToday = forecastToday.find(f => f.hotel_id === 'mercure')
+  const ibisForecastToday = forecastToday.find(f => f.hotel_id === 'ibis')
+
+  const bfMercure = mercureForecastToday?.breakfast_covers ?? mercureToday?.breakfast_covers ?? 0
+  const bfIbis = ibisForecastToday?.breakfast_covers ?? ibisToday?.breakfast_covers ?? 0
 
   const today = isoDate(new Date())
   const dateLabel = formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -131,26 +136,16 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
         <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
           Chiffres clés du jour
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <MetricCard
             hotel="mercure"
             label="Mercure Occ."
-            value={mercureToday ? formatPct(mercureToday.occupancy_pct) : '—'}
-          />
-          <MetricCard
-            hotel="mercure"
-            label="Arr. / Dép. Mercure"
-            value={mercureToday ? `${mercureToday.arrivals} / ${mercureToday.departures}` : '—'}
+            value={mercureForecastToday ? formatPct(mercureForecastToday.occupancy_pct) : '—'}
           />
           <MetricCard
             hotel="ibis"
             label="Ibis Occ."
-            value={ibisToday ? formatPct(ibisToday.occupancy_pct) : '—'}
-          />
-          <MetricCard
-            hotel="ibis"
-            label="Arr. / Dép. Ibis"
-            value={ibisToday ? `${ibisToday.arrivals} / ${ibisToday.departures}` : '—'}
+            value={ibisForecastToday ? formatPct(ibisForecastToday.occupancy_pct) : '—'}
           />
           <MetricCard
             color="green"
@@ -319,12 +314,6 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
           <div className="grid grid-cols-2 gap-3">
             <MetricCard hotel="mercure" label="Mercure Occ." value={mercureYesterday ? formatPct(mercureYesterday.occupancy_pct) : '—'} />
             <MetricCard hotel="ibis" label="Ibis Occ." value={ibisYesterday ? formatPct(ibisYesterday.occupancy_pct) : '—'} />
-            <MetricCard hotel="mercure" label="Arr. / Dép. Mercure"
-              value={mercureYesterday ? `${mercureYesterday.arrivals ?? 0} / ${mercureYesterday.departures ?? 0}` : '—'}
-            />
-            <MetricCard hotel="ibis" label="Arr. / Dép. Ibis"
-              value={ibisYesterday ? `${ibisYesterday.arrivals ?? 0} / ${ibisYesterday.departures ?? 0}` : '—'}
-            />
             <MetricCard color="green" label="PDJ Total"
               value={(mercureYesterday?.breakfast_covers ?? 0) + (ibisYesterday?.breakfast_covers ?? 0)}
             />
@@ -344,7 +333,7 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
               value={mercureYesterday?.banquet_dinner_covers ?? '—'}
             />
             <MetricCard color="sky" label="Room Service"
-              value={mercureYesterday?.room_service_revenue ? `${mercureYesterday.room_service_revenue.toFixed(0)} €` : '—'}
+              value={mercureYesterday?.room_service_revenue ?? '—'}
             />
           </div>
         </div>

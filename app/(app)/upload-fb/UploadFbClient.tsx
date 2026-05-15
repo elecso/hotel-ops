@@ -9,9 +9,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Upload, CheckCircle, X, EyeOff, Plus, Download, Trash2 } from 'lucide-react'
 import { isoDate } from '@/lib/utils'
+import { AddFbProductModal } from './AddFbProductModal'
+import type { FbMenuItem, FbBeverageProduct } from './AddFbProductModal'
 
-interface MenuItem { id: number; name: string; outlet: string; recipe_id: number | null }
-interface BeverageProduct { id: number; name: string; unit: string; sub_products: { id: number; name: string; decrement_factor: number }[] }
+type MenuItem = FbMenuItem
+type BeverageProduct = FbBeverageProduct
 interface AiMapping { id: number; raw_name: string; product_id: number; confirmed: boolean }
 
 interface ParsedLine {
@@ -58,12 +60,7 @@ function saveSkipForever(list: string[]) {
   try { localStorage.setItem('fb_skip_forever', JSON.stringify(list)) } catch { /* noop */ }
 }
 
-interface CreateProductForm {
-  lineIdx: number
-  name: string
-  type: 'food' | 'beverage'
-  unit: string
-}
+interface CreateModal { open: boolean; lineIdx: number; defaultName: string }
 
 export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings, pendingN8nImports, fbHistory }: Props) {
   const [step, setStep] = useState<Step>(1)
@@ -77,8 +74,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const [lines, setLines] = useState<MappedLine[]>([])
   const [localMenuItems, setLocalMenuItems] = useState<MenuItem[]>(menuItems)
   const [localBeverages, setLocalBeverages] = useState<BeverageProduct[]>(beverages)
-  const [createForm, setCreateForm] = useState<CreateProductForm | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [createModal, setCreateModal] = useState<CreateModal>({ open: false, lineIdx: 0, defaultName: '' })
   const [loadedN8nId, setLoadedN8nId] = useState<number | null>(null)
   const [n8nImports, setN8nImports] = useState<N8nImport[]>(pendingN8nImports)
   const supabase = createClient()
@@ -201,43 +197,18 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
     setLines(prev => prev.filter(l => l.raw_name !== rawName))
   }
 
-  const handleCreateProduct = async () => {
-    if (!createForm || !createForm.name.trim()) return
-    setCreating(true)
-    try {
-      if (createForm.type === 'food') {
-        const { data } = await supabase
-          .from('menu_items')
-          .insert({ name: createForm.name.trim(), outlet: 'lunch', is_active: true })
-          .select('id, name, outlet, recipe_id')
-          .single()
-        if (data) {
-          const newItem = data as MenuItem
-          setLocalMenuItems(prev => [...prev, newItem])
-          setLines(prev => prev.map((l, idx) =>
-            idx === createForm.lineIdx ? { ...l, mapped_to: `menu_item:${newItem.id}` } : l
-          ))
-        }
-      } else {
-        const { data } = await supabase
-          .from('products')
-          .insert({ name: createForm.name.trim(), type: 'beverage', unit: createForm.unit || null, is_active: true })
-          .select('id, name, unit')
-          .single()
-        if (data) {
-          const newBev: BeverageProduct = { id: data.id, name: data.name, unit: data.unit ?? '', sub_products: [] }
-          setLocalBeverages(prev => [...prev, newBev])
-          setLines(prev => prev.map((l, idx) =>
-            idx === createForm.lineIdx ? { ...l, mapped_to: `beverage:${newBev.id}` } : l
-          ))
-        }
-      }
-      setCreateForm(null)
-    } catch (e: unknown) {
-      setError((e as Error).message)
-    } finally {
-      setCreating(false)
-    }
+  const handleCreatedMenuItem = (lineIdx: number, item: MenuItem) => {
+    setLocalMenuItems(prev => [...prev, item])
+    setLines(prev => prev.map((l, idx) =>
+      idx === lineIdx ? { ...l, mapped_to: `menu_item:${item.id}` } : l
+    ))
+  }
+
+  const handleCreatedBeverage = (lineIdx: number, bev: BeverageProduct) => {
+    setLocalBeverages(prev => [...prev, bev])
+    setLines(prev => prev.map((l, idx) =>
+      idx === lineIdx ? { ...l, mapped_to: `beverage:${bev.id}` } : l
+    ))
   }
 
   const handleSave = async () => {
@@ -494,7 +465,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                             {buildOptions(localMenuItems, localBeverages).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
                           <button
-                            onClick={() => setCreateForm({ lineIdx: i, name: line.raw_name, type: 'food', unit: '' })}
+                            onClick={() => setCreateModal({ open: true, lineIdx: i, defaultName: line.raw_name })}
                             title="Créer un nouveau produit"
                             className="p-1.5 rounded text-[#B0A5B4] hover:text-[#602460] hover:bg-[#602460]/10 transition-colors flex-shrink-0"
                           >
@@ -533,52 +504,14 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
             </CardContent>
           </Card>
 
-          {/* Inline create product modal */}
-          {createForm && (
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Créer un nouveau produit</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Nom du produit</Label>
-                    <Input
-                      value={createForm.name}
-                      onChange={e => setCreateForm(f => f ? { ...f, name: e.target.value } : f)}
-                      placeholder="Nom du produit"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Type</Label>
-                    <select
-                      value={createForm.type}
-                      onChange={e => setCreateForm(f => f ? { ...f, type: e.target.value as 'food' | 'beverage' } : f)}
-                      className="h-9 rounded-md border border-[#E5E2D8] px-2 text-sm text-[#3D1640] focus:outline-none"
-                    >
-                      <option value="food">Alimentation (Menu)</option>
-                      <option value="beverage">Boisson</option>
-                    </select>
-                  </div>
-                  {createForm.type === 'beverage' && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Unité</Label>
-                      <Input
-                        value={createForm.unit}
-                        onChange={e => setCreateForm(f => f ? { ...f, unit: e.target.value } : f)}
-                        placeholder="ex: bouteille"
-                        className="w-32"
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleCreateProduct} disabled={creating || !createForm.name.trim()}>
-                    {creating ? 'Création…' : 'Créer et mapper'}
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setCreateForm(null)}>Annuler</Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <AddFbProductModal
+            open={createModal.open}
+            lineIdx={createModal.lineIdx}
+            defaultName={createModal.defaultName}
+            onClose={() => setCreateModal(s => ({ ...s, open: false }))}
+            onCreatedMenuItem={handleCreatedMenuItem}
+            onCreatedBeverage={handleCreatedBeverage}
+          />
 
           {lines.length === 0 && (
             <p className="text-sm text-center text-[#B0A5B4] py-4">Aucun produit à mapper.</p>

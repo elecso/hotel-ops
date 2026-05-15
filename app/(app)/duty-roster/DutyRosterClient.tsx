@@ -111,9 +111,19 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
   const parseAndImportCsv = async (csv: string) => {
     const lines = csv.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length < 2) return
+
+    // Capture values at call-time (prevents stale closure issues)
+    const currentWeekStart = weekStart
+    const currentWeekDates = [...weekDates]
+
+    // Step 1: delete existing rows for this exact week
     await supabase.from('duty_roster').delete()
-      .eq('week_start', weekStart)
-      .in('day_date', weekDates)
+      .eq('week_start', currentWeekStart)
+      .in('day_date', currentWeekDates)
+
+    // Step 2: build all new rows then bulk-insert (no upsert to avoid cross-week overwrite)
+    const toInsert: { staff_id: number; week_start: string; day_date: string; shift: string; value: string }[] = []
+
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(';')
       const service = cols[0]?.trim()
@@ -130,16 +140,15 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
       for (let d = 0; d < 7; d++) {
         const value = cols[4 + d]?.trim()
         if (!value) continue
-        const date = weekDates[d]
-        if (date) {
-          await supabase.from('duty_roster').upsert({
-            staff_id: staffRow.id, week_start: weekStart, day_date: date, shift, value,
-          }, { onConflict: 'staff_id,day_date,shift' })
-        }
+        const date = currentWeekDates[d]
+        if (date) toInsert.push({ staff_id: staffRow.id, week_start: currentWeekStart, day_date: date, shift, value })
       }
     }
+
+    if (toInsert.length > 0) await supabase.from('duty_roster').insert(toInsert)
+
     const { data: newRoster } = await supabase.from('duty_roster').select('*')
-      .eq('week_start', weekStart).in('day_date', weekDates)
+      .eq('week_start', currentWeekStart).in('day_date', currentWeekDates)
     setRoster(newRoster ?? [])
   }
 

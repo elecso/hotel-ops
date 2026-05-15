@@ -31,6 +31,7 @@ export default async function DutyRosterPage({
 
   return (
     <DutyRosterClient
+      key={weekStartIso}
       weekStart={weekStartIso}
       weekDates={weekDates}
       staff={staff ?? []}

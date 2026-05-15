@@ -21,7 +21,7 @@ export async function loadInventoryData(type: ProductType) {
   ] = await Promise.all([
     supabase
       .from('products')
-      .select('*, supplier:suppliers(*), category:product_categories(*), sub_products:beverage_sub_products(*)')
+      .select('*, supplier:suppliers(*), category:product_categories(*), sub_products:beverage_sub_products(*), room_typologies:product_room_typologies(room_type_id)')
       .eq('type', type)
       .eq('is_active', true)
       .order('name'),

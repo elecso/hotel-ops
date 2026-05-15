@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
@@ -196,6 +196,21 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
     setExpandedSubs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const isBeverage = type === 'beverage'
+  const groupByCategory = !isBeverage
+
+  // Build category-grouped structure for non-beverage types
+  const categoryGroups: { catName: string; rows: StockRow[] }[] = []
+  if (groupByCategory) {
+    const seen = new Set<string>()
+    for (const row of localRows) {
+      const catName = row.product.category?.name ?? 'Sans catégorie'
+      if (!seen.has(catName)) { seen.add(catName); categoryGroups.push({ catName, rows: [] }) }
+      categoryGroups.find(g => g.catName === catName)!.rows.push(row)
+    }
+    categoryGroups.sort((a, b) => a.catName.localeCompare(b.catName, 'fr'))
+  }
+
+  const colCount = isBeverage ? 12 : 11
 
   if (localRows.length === 0) {
     return (
@@ -205,30 +220,10 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
     )
   }
 
-  return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {isBeverage && <TableHead className="w-8"></TableHead>}
-            <TableHead>Produit</TableHead>
-            <TableHead>Fournisseur</TableHead>
-            <TableHead>Unité</TableHead>
-            <TableHead>Conditionnement</TableHead>
-            <TableHead>Prix HT</TableHead>
-            <TableHead>Stock initial</TableHead>
-            <TableHead>Acheté</TableHead>
-            <TableHead>Utilisé</TableHead>
-            <TableHead>Stock théorique</TableHead>
-            <TableHead>Stock min.</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {localRows.map(({ product, stock, theoretical }) => {
-            const isLow = theoretical < (product.min_stock ?? 0)
-            const isSubOpen = expandedSubs.includes(product.id)
-            const hasSubProducts = isBeverage && ((product.sub_products?.length ?? 0) > 0 || isAdmin)
+  const renderRow = ({ product, stock, theoretical }: StockRow) => {
+    const isLow = theoretical < (product.min_stock ?? 0)
+    const isSubOpen = expandedSubs.includes(product.id)
+    const hasSubProducts = isBeverage && ((product.sub_products?.length ?? 0) > 0 || isAdmin)
             return (
               <>
                 <TableRow
@@ -334,10 +329,43 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
                 )}
               </>
             )
-          })}
+  }
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {isBeverage && <TableHead className="w-8" />}
+            <TableHead>Produit</TableHead>
+            <TableHead>Fournisseur</TableHead>
+            <TableHead>Unité</TableHead>
+            <TableHead>Conditionnement</TableHead>
+            <TableHead>Prix HT</TableHead>
+            <TableHead>Stock ouv.</TableHead>
+            <TableHead>Achats</TableHead>
+            <TableHead>Utilisé</TableHead>
+            <TableHead>Théorique</TableHead>
+            <TableHead>Min</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {groupByCategory
+            ? categoryGroups.map(group => (
+                <Fragment key={`cat-${group.catName}`}>
+                  <TableRow className="bg-[#F4F2ED]">
+                    <TableCell colSpan={colCount} className="py-2 px-4 text-xs font-bold uppercase tracking-widest text-[#7B6B80]">
+                      {group.catName}
+                    </TableCell>
+                  </TableRow>
+                  {group.rows.map(row => <Fragment key={row.product.id}>{renderRow(row)}</Fragment>)}
+                </Fragment>
+              ))
+            : localRows.map(row => <Fragment key={row.product.id}>{renderRow(row)}</Fragment>)
+          }
         </TableBody>
       </Table>
-
       {editingProduct && (
         <EditProductModal
           open={!!editingProduct}

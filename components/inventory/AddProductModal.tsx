@@ -49,6 +49,7 @@ export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaul
     unit: '', packaging_desc: '', packaging_qty: '',
     price_excl_tax: '', min_stock: '', delivery_days: '',
     purchase_url: '', hotel_scope: 'both' as 'mercure' | 'ibis' | 'both',
+    coefficient: '',
   })
 
   const [selectedRoomTypes, setSelectedRoomTypes] = useState<number[]>([])
@@ -116,12 +117,13 @@ export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaul
         delivery_days: form.delivery_days ? parseInt(form.delivery_days) : null,
         purchase_url: form.purchase_url || null,
         hotel_scope: form.hotel_scope,
+        coefficient: form.coefficient ? parseFloat(form.coefficient) : null,
       }).select().single()
 
       if (pErr) throw pErr
       const createdProduct = product
 
-      if (type === 'room' && selectedRoomTypes.length > 0) {
+      if ((type === 'room' || type === 'laundry') && selectedRoomTypes.length > 0) {
         await supabase.from('product_room_typologies').insert(
           selectedRoomTypes.map(rt => ({ product_id: product.id, room_type_id: rt }))
         )
@@ -164,7 +166,7 @@ export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaul
     }
   }
 
-  const filteredRoomTypes = type === 'room' && form.hotel_scope !== 'both'
+  const filteredRoomTypes = (type === 'room' || type === 'laundry') && form.hotel_scope !== 'both'
     ? roomTypes.filter(rt => rt.hotel_id === form.hotel_scope)
     : roomTypes
 
@@ -295,7 +297,7 @@ export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaul
               <Label>URL commande</Label>
               <Input value={form.purchase_url} onChange={set('purchase_url')} placeholder="https://..." type="url" />
             </div>
-            {(type === 'room') && (
+            {(type === 'room' || type === 'laundry') && (
               <div className="space-y-1.5">
                 <Label>Portée hôtel</Label>
                 <Select value={form.hotel_scope} onValueChange={v => setForm(f => ({ ...f, hotel_scope: v as 'mercure' | 'ibis' | 'both' }))}>
@@ -308,9 +310,15 @@ export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaul
                 </Select>
               </div>
             )}
+            {type === 'laundry' && (
+              <div className="space-y-1.5">
+                <Label>Coefficient (par chambre)</Label>
+                <Input type="number" value={form.coefficient} onChange={set('coefficient')} placeholder="ex: 2" step="0.01" />
+              </div>
+            )}
           </div>
 
-          {type === 'room' && filteredRoomTypes.length > 0 && (
+          {(type === 'room' || type === 'laundry') && filteredRoomTypes.length > 0 && (
             <div className="space-y-2">
               <Label>Typologies de chambre</Label>
               <div className="grid grid-cols-2 gap-1.5">

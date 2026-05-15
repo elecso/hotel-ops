@@ -120,9 +120,11 @@ export interface Product {
   purchase_url: string
   hotel_scope: HotelAccess
   is_active: boolean
+  coefficient?: number
   category?: ProductCategory
   supplier?: Supplier
   sub_products?: BeverageSubProduct[]
+  room_typologies?: { room_type_id: number }[]
 }
 
 export interface BeverageSubProduct {

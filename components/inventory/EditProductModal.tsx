@@ -28,6 +28,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
     unit: '', packaging_desc: '', packaging_qty: '',
     price_excl_tax: '', min_stock: '', delivery_days: '',
     purchase_url: '', hotel_scope: 'both' as 'mercure' | 'ibis' | 'both',
+    coefficient: '',
   })
 
   // Inline creation state
@@ -58,6 +59,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
         delivery_days: product.delivery_days ? String(product.delivery_days) : '',
         purchase_url: product.purchase_url ?? '',
         hotel_scope: product.hotel_scope ?? 'both',
+        coefficient: product.coefficient ? String(product.coefficient) : '',
       })
     }
   }, [product])
@@ -104,6 +106,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
         delivery_days: form.delivery_days ? parseInt(form.delivery_days) : null,
         purchase_url: form.purchase_url || null,
         hotel_scope: form.hotel_scope,
+        coefficient: form.coefficient ? parseFloat(form.coefficient) : null,
       }).eq('id', product.id)
 
       if (pErr) throw pErr
@@ -247,6 +250,12 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
                 </SelectContent>
               </Select>
             </div>
+            {product.type === 'laundry' && (
+              <div className="space-y-1.5">
+                <Label>Coefficient (par chambre)</Label>
+                <Input type="number" value={form.coefficient} onChange={set('coefficient')} placeholder="ex: 2" step="0.01" />
+              </div>
+            )}
           </div>
         </div>
 

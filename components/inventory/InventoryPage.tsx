@@ -39,6 +39,8 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
   const [month, setMonth] = useState(monthProp ?? currentMonth())
   const [rows, setRows] = useState<AnyRow[]>(rowsProp)
   const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [filterHotel, setFilterHotel] = useState<'all' | 'mercure' | 'ibis'>('all')
+  const [filterRoomTypes, setFilterRoomTypes] = useState<number[]>([])
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [csvError, setCsvError] = useState('')
@@ -50,7 +52,7 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
     setLoading(true)
     const { data: products } = await supabase
       .from('products')
-      .select('*, supplier:suppliers(*), category:product_categories(*), sub_products:beverage_sub_products(*)')
+      .select('*, supplier:suppliers(*), category:product_categories(*), sub_products:beverage_sub_products(*), room_typologies:product_room_typologies(room_type_id)')
       .eq('type', type)
       .eq('is_active', true)
       .order('name')
@@ -157,11 +159,27 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
     if (csvInputRef.current) csvInputRef.current.value = ''
   }
 
+  const toggleRoomType = (id: number) =>
+    setFilterRoomTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
   const monthOptions = generateMonthOptions()
   const relevantCategories = categories.filter(c => c.type === type)
-  const filteredRows = filterCategory !== 'all'
-    ? rows.filter(r => String(r.product?.category_id) === filterCategory)
-    : rows
+  const showHotelFilter = type === 'room' || type === 'laundry'
+  const visibleRoomTypes = filterHotel === 'all' ? roomTypes : roomTypes.filter(rt => rt.hotel_id === filterHotel)
+
+  const filteredRows = rows.filter(r => {
+    if (filterCategory !== 'all' && String(r.product?.category_id) !== filterCategory) return false
+    if (showHotelFilter && filterHotel !== 'all') {
+      const scope = r.product?.hotel_scope ?? 'both'
+      if (filterHotel === 'mercure' && scope === 'ibis') return false
+      if (filterHotel === 'ibis' && scope === 'mercure') return false
+    }
+    if (filterRoomTypes.length > 0) {
+      const productRTs = (r.product?.room_typologies ?? []).map((rt: { room_type_id: number }) => rt.room_type_id)
+      if (!filterRoomTypes.some((id: number) => productRTs.includes(id))) return false
+    }
+    return true
+  })
 
   return (
     <div className="space-y-4 w-full">
@@ -189,6 +207,18 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
                 {relevantCategories.map(c => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          )}
+          {showHotelFilter && (
+            <Select value={filterHotel} onValueChange={v => { setFilterHotel(v as 'all' | 'mercure' | 'ibis'); setFilterRoomTypes([]) }}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Hôtel" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les hôtels</SelectItem>
+                <SelectItem value="mercure">Mercure</SelectItem>
+                <SelectItem value="ibis">Ibis</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -223,6 +253,32 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
           )}
         </div>
       </div>
+
+      {showHotelFilter && visibleRoomTypes.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {visibleRoomTypes.map(rt => (
+            <button
+              key={rt.id}
+              onClick={() => toggleRoomType(rt.id)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                filterRoomTypes.includes(rt.id)
+                  ? 'bg-[#602460] text-white border-[#602460]'
+                  : 'bg-white text-[#7B6B80] border-[#E5E2D8] hover:border-[#602460]/40 hover:text-[#3D1640]'
+              }`}
+            >
+              {rt.code}
+            </button>
+          ))}
+          {filterRoomTypes.length > 0 && (
+            <button
+              onClick={() => setFilterRoomTypes([])}
+              className="text-xs px-2.5 py-1 rounded-full border border-dashed border-[#B0A5B4] text-[#B0A5B4] hover:text-red-400 hover:border-red-300 transition-colors"
+            >
+              Effacer
+            </button>
+          )}
+        </div>
+      )}
 
       {csvError && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{csvError}</div>

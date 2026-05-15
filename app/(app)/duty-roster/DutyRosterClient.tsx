@@ -112,7 +112,6 @@ export function DutyRosterClient({ weekStart, weekDates, staff: initialStaff, ro
     const lines = csv.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length < 2) return
     await supabase.from('duty_roster').delete()
-      .eq('week_start', weekStart)
       .in('day_date', weekDates)
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(';')

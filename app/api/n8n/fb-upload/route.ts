@@ -26,14 +26,34 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  // Dedup: if a record for this date already exists, don't create a duplicate
+  const { data: existing } = await supabase
+    .from('fb_imports')
+    .select('id, status')
+    .eq('import_date', date)
+    .eq('source', 'n8n')
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existing?.status === 'validated') {
+    // Already processed — skip silently
+    return NextResponse.json({ ok: true, id: existing.id, skipped: true })
+  }
+
+  if (existing?.status === 'pending') {
+    // Update raw_json on the existing pending record instead of inserting a new one
+    const { error } = await supabase
+      .from('fb_imports')
+      .update({ raw_json: items })
+      .eq('id', existing.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, id: existing.id })
+  }
+
   const { data, error } = await supabase
     .from('fb_imports')
-    .insert({
-      import_date: date,
-      source: 'n8n',
-      status: 'pending',
-      raw_json: items,
-    })
+    .insert({ import_date: date, source: 'n8n', status: 'pending', raw_json: items })
     .select('id')
     .single()
 

@@ -11,7 +11,7 @@ export default async function FoodPage() {
   const monthStart = currentMonth()
 
   const [{ data: menuItems }, { data: sales }] = await Promise.all([
-    supabase.from('menu_items').select('id, name, outlet').eq('is_active', true).order('name'),
+    supabase.from('menu_items').select('id, name, outlet, category').eq('is_active', true).order('name'),
     supabase
       .from('menu_item_sales')
       .select('menu_item_id, quantity')
@@ -28,6 +28,7 @@ export default async function FoodPage() {
     id: mi.id as number,
     name: mi.name as string,
     outlet: (mi.outlet as string) ?? '',
+    category: (mi.category as string) ?? 'other',
     sales_mtd: salesByItem[mi.id as number] ?? 0,
   }))
 

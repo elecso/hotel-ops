@@ -19,10 +19,21 @@ const OUTLET_LABELS: Record<string, string> = {
   epicerie: "L'Épicerie",
 }
 
+const CATEGORIES = ['starter', 'main', 'dessert', 'cheese', 'other'] as const
+const CATEGORY_LABELS: Record<string, string> = {
+  starter: 'Entrée',
+  main: 'Plat',
+  dessert: 'Dessert',
+  cheese: 'Fromage',
+  other: 'Autre',
+}
+const CATEGORY_ORDER = ['starter', 'main', 'dessert', 'cheese', 'other']
+
 export interface FoodMenuRow {
   id: number
   name: string
   outlet: string
+  category: string
   sales_mtd: number
 }
 
@@ -39,6 +50,7 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
   const [editItem, setEditItem] = useState<FoodMenuRow | null>(null)
   const [formName, setFormName] = useState('')
   const [formOutlet, setFormOutlet] = useState('lunch')
+  const [formCategory, setFormCategory] = useState('main')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -51,8 +63,21 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
     setDeletingId(null)
   }
 
-  const openAdd = () => { setFormName(''); setFormOutlet('lunch'); setError(''); setShowAdd(true) }
-  const openEdit = (row: FoodMenuRow) => { setEditItem(row); setFormName(row.name); setFormOutlet(row.outlet ?? 'lunch') }
+  const openAdd = () => { setFormName(''); setFormOutlet('lunch'); setFormCategory('main'); setError(''); setShowAdd(true) }
+  const openEdit = (row: FoodMenuRow) => {
+    setEditItem(row)
+    setFormName(row.name)
+    setFormOutlet(row.outlet ?? 'lunch')
+    setFormCategory(row.category ?? 'other')
+  }
+
+  const sortRows = (list: FoodMenuRow[]) =>
+    [...list].sort((a, b) => {
+      const ai = CATEGORY_ORDER.indexOf(a.category ?? 'other')
+      const bi = CATEGORY_ORDER.indexOf(b.category ?? 'other')
+      if (ai !== bi) return ai - bi
+      return a.name.localeCompare(b.name, 'fr')
+    })
 
   const handleAdd = async () => {
     if (!formName.trim()) return
@@ -61,13 +86,12 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
     try {
       const { data, error: err } = await supabase
         .from('menu_items')
-        .insert({ name: formName.trim(), outlet: formOutlet, is_active: true })
-        .select('id, name, outlet')
+        .insert({ name: formName.trim(), outlet: formOutlet, category: formCategory, is_active: true })
+        .select('id, name, outlet, category')
         .single()
       if (err) throw err
       if (data) {
-        setRows(prev => [...prev, { id: data.id, name: data.name, outlet: data.outlet, sales_mtd: 0 }]
-          .sort((a, b) => a.name.localeCompare(b.name, 'fr')))
+        setRows(prev => sortRows([...prev, { id: data.id, name: data.name, outlet: data.outlet, category: data.category ?? 'other', sales_mtd: 0 }]))
       }
       setShowAdd(false)
     } catch (e: unknown) {
@@ -84,10 +108,12 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
     try {
       const { error: err } = await supabase
         .from('menu_items')
-        .update({ name: formName.trim(), outlet: formOutlet })
+        .update({ name: formName.trim(), outlet: formOutlet, category: formCategory })
         .eq('id', editItem.id)
       if (err) throw err
-      setRows(prev => prev.map(r => r.id === editItem.id ? { ...r, name: formName.trim(), outlet: formOutlet } : r))
+      setRows(prev => sortRows(prev.map(r =>
+        r.id === editItem.id ? { ...r, name: formName.trim(), outlet: formOutlet, category: formCategory } : r
+      )))
       setEditItem(null)
     } catch (e: unknown) {
       setError((e as Error).message)
@@ -96,12 +122,21 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
     }
   }
 
-  const OutletForm = () => (
+  const ItemForm = () => (
     <div className="px-6 py-4 space-y-4">
       {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
       <div className="space-y-1.5">
         <Label>Nom *</Label>
         <Input value={formName} onChange={e => setFormName(e.target.value)} placeholder="Plat du jour" autoFocus />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Catégorie</Label>
+        <Select value={formCategory} onValueChange={setFormCategory}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label>Outlet</Label>
@@ -114,6 +149,9 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
       </div>
     </div>
   )
+
+  const sortedRows = sortRows(rows)
+  const usedCategories = CATEGORY_ORDER.filter(c => sortedRows.some(r => (r.category ?? 'other') === c))
 
   return (
     <div className="space-y-4 w-full">
@@ -137,43 +175,55 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {sortedRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center text-sm text-[#B0A5B4] py-10">
                   Aucun article. Ajoutez-en via le bouton ci-dessus ou créez-en lors d&apos;un F&B Upload.
                 </TableCell>
               </TableRow>
-            ) : rows.map(row => (
-              <TableRow key={row.id}>
-                <TableCell className="font-medium text-sm text-[#3D1640]">{row.name}</TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  {row.sales_mtd > 0
-                    ? <span className="text-[#602460] font-semibold">{row.sales_mtd}</span>
-                    : <span className="text-[#C5C0B1]">0</span>
-                  }
-                </TableCell>
-                {isAdmin && (
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openEdit(row)}
-                        className="text-[#B0A5B4] hover:text-[#602460] p-1 rounded hover:bg-[#602460]/10 transition-colors"
-                        title="Modifier"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        disabled={deletingId === row.id}
-                        className="text-[#B0A5B4] hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-40"
-                        title="Désactiver"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+            ) : usedCategories.map(cat => (
+              <>
+                <TableRow key={`cat-${cat}`}>
+                  <TableCell
+                    colSpan={isAdmin ? 3 : 2}
+                    className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-[#F4F2ED] text-[#7B6B80]"
+                  >
+                    {CATEGORY_LABELS[cat]}
                   </TableCell>
-                )}
-              </TableRow>
+                </TableRow>
+                {sortedRows.filter(r => (r.category ?? 'other') === cat).map(row => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium text-sm text-[#3D1640]">{row.name}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {row.sales_mtd > 0
+                        ? <span className="text-[#602460] font-semibold">{row.sales_mtd}</span>
+                        : <span className="text-[#C5C0B1]">0</span>
+                      }
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="text-[#B0A5B4] hover:text-[#602460] p-1 rounded hover:bg-[#602460]/10 transition-colors"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            disabled={deletingId === row.id}
+                            className="text-[#B0A5B4] hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-40"
+                            title="Désactiver"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </>
             ))}
           </TableBody>
         </Table>
@@ -183,7 +233,7 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
       <Dialog open={showAdd} onOpenChange={o => !o && setShowAdd(false)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Ajouter un article</DialogTitle></DialogHeader>
-          <OutletForm />
+          <ItemForm />
           <DialogFooter>
             <Button variant="secondary" onClick={() => setShowAdd(false)}>Annuler</Button>
             <Button onClick={handleAdd} disabled={saving || !formName.trim()}>
@@ -197,7 +247,7 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
       <Dialog open={!!editItem} onOpenChange={o => !o && setEditItem(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Modifier l&apos;article</DialogTitle></DialogHeader>
-          <OutletForm />
+          <ItemForm />
           <DialogFooter>
             <Button variant="secondary" onClick={() => setEditItem(null)}>Annuler</Button>
             <Button onClick={handleEdit} disabled={saving || !formName.trim()}>

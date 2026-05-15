@@ -653,3 +653,8 @@ CREATE POLICY "staff_fb_stock_update" ON stock_months
 -- ============================================================
 ALTER TABLE product_ai_mappings
   ADD COLUMN IF NOT EXISTS sub_product_id int references beverage_sub_products(id);
+
+-- ============================================================
+-- FOOD MENU ITEM CATEGORY
+-- ============================================================
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS category text DEFAULT 'other';

@@ -125,6 +125,17 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
   const updateLine = (i: number, productId: number | null) =>
     setParsedLines(prev => prev ? prev.map((l, idx) => idx === i ? { ...l, product_id: productId } : l) : prev)
 
+  const updateLineField = (i: number, field: 'qty' | 'unit_price', value: string) => {
+    const num = parseFloat(value)
+    if (isNaN(num)) return
+    setParsedLines(prev => prev ? prev.map((l, idx) => {
+      if (idx !== i) return l
+      const updated = { ...l, [field]: num }
+      updated.total = Math.round(updated.qty * updated.unit_price * 100) / 100
+      return updated
+    }) : prev)
+  }
+
   const handleValidate = async () => {
     if (!parsedLines || !pendingInvoiceId) return
     setSaving(true)
@@ -221,8 +232,8 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
 
       {/* Parsed lines mapping */}
       {parsedLines && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Left: mapping table */}
+        <div className="space-y-6">
+          {/* Mapping table */}
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -260,9 +271,25 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
                             >+</button>
                           </div>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{line.qty}</TableCell>
-                        <TableCell className="font-mono text-xs">{line.unit_price?.toFixed(2)}</TableCell>
-                        <TableCell className="font-mono text-xs">{line.total?.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <input
+                            type="number"
+                            value={line.qty}
+                            onChange={e => updateLineField(i, 'qty', e.target.value)}
+                            className="w-16 h-7 rounded border border-[#E5E2D8] bg-white px-2 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
+                            min="0" step="0.001"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <input
+                            type="number"
+                            value={line.unit_price}
+                            onChange={e => updateLineField(i, 'unit_price', e.target.value)}
+                            className="w-20 h-7 rounded border border-[#E5E2D8] bg-white px-2 text-xs font-mono text-center focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
+                            min="0" step="0.01"
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-sky-700 font-semibold">{line.total?.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -281,17 +308,17 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
             </div>
           </div>
 
-          {/* Right: PDF preview */}
+          {/* PDF preview below */}
           {fileUrl && (
-            <div className="flex flex-col">
+            <div>
               <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#C5C0B1' }}>
                 Aperçu de la facture
               </p>
               <iframe
                 src={fileUrl}
                 title="Aperçu facture"
-                className="flex-1 rounded-xl border border-[#E5E2D8]"
-                style={{ minHeight: '600px' }}
+                className="w-full rounded-xl border border-[#E5E2D8]"
+                style={{ height: '800px' }}
               />
             </div>
           )}

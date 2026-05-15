@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Edit2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
-interface FoodProduct { id: number; name: string; unit: string }
+interface FoodProduct { id: number; name: string; unit: string; price_excl_tax: number | null }
 interface MenuItemRef { id: number; name: string; outlet: string; recipe_id: number | null }
 interface IngredientDraft { product_id: string; quantity: string; unit: string }
 
@@ -242,34 +242,54 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
                 </Button>
               </div>
               <div className="space-y-2">
-                {ingredients.map((ing, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <select
-                      value={ing.product_id}
-                      onChange={e => updateIngredient(i, 'product_id', e.target.value)}
-                      className="flex-1 h-9 rounded-[6px] border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
-                    >
-                      <option value="">Produit…</option>
-                      {foodProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                    <Input
-                      placeholder="Qté"
-                      value={ing.quantity}
-                      onChange={e => updateIngredient(i, 'quantity', e.target.value)}
-                      type="number"
-                      className="w-24"
-                    />
-                    <Input
-                      placeholder="Unité"
-                      value={ing.unit}
-                      onChange={e => updateIngredient(i, 'unit', e.target.value)}
-                      className="w-20"
-                    />
-                    <button onClick={() => removeIngredient(i)} className="text-red-500 hover:text-red-700">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+                {ingredients.map((ing, i) => {
+                  const sel = foodProducts.find(p => String(p.id) === ing.product_id)
+                  return (
+                    <div key={i} className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={ing.product_id}
+                          onChange={e => {
+                            const prod = foodProducts.find(p => String(p.id) === e.target.value)
+                            updateIngredient(i, 'product_id', e.target.value)
+                            if (prod) updateIngredient(i, 'unit', prod.unit)
+                          }}
+                          className="flex-1 h-9 rounded-[6px] border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
+                        >
+                          <option value="">Produit…</option>
+                          {foodProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        <Input
+                          placeholder="Qté"
+                          value={ing.quantity}
+                          onChange={e => updateIngredient(i, 'quantity', e.target.value)}
+                          type="number"
+                          className="w-24"
+                        />
+                        <Input
+                          placeholder="Unité"
+                          value={ing.unit}
+                          onChange={e => updateIngredient(i, 'unit', e.target.value)}
+                          className="w-20"
+                        />
+                        <button onClick={() => removeIngredient(i)} className="text-red-500 hover:text-red-700">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      {sel && (
+                        <div className="flex items-center gap-3 pl-1 text-[11px] text-[#B0A5B4]">
+                          <span>Unité: <span className="font-semibold text-[#3D1640]">{sel.unit}</span></span>
+                          {sel.price_excl_tax != null && (
+                            <span>Prix HT: <span className="font-semibold text-sky-600">{formatCurrency(sel.price_excl_tax)}</span></span>
+                          )}
+                          {ing.quantity && sel.price_excl_tax != null && (
+                            <span>Coût ligne: <span className="font-semibold text-[#602460]">{formatCurrency(parseFloat(ing.quantity) * sel.price_excl_tax)}</span></span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const admin = await createAdminClient()
 
     // Download file from storage
-    const { data: fileData, error: downloadErr } = await admin.storage.from('invoices').download(path)
+    const { data: fileData, error: downloadErr } = await admin.storage.from('Invoice').download(path)
     if (downloadErr || !fileData) throw new Error(downloadErr?.message ?? 'Download failed')
 
     const arrayBuffer = await fileData.arrayBuffer()
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const lines = await parseInvoiceFile(base64, mediaType)
 
     // Generate signed URL for preview (valid 1 hour)
-    const { data: signedUrlData } = await admin.storage.from('invoices').createSignedUrl(path, 3600)
+    const { data: signedUrlData } = await admin.storage.from('Invoice').createSignedUrl(path, 3600)
 
     return NextResponse.json({ lines, signedUrl: signedUrlData?.signedUrl ?? null })
   } catch (e: unknown) {

@@ -8,7 +8,7 @@ export async function DELETE(req: NextRequest) {
     if (!path) return NextResponse.json({ error: 'Missing path' }, { status: 400 })
 
     const admin = await createAdminClient()
-    const { error } = await admin.storage.from('invoices').remove([path])
+    const { error } = await admin.storage.from('Invoice').remove([path])
     if (error) throw new Error(error.message)
 
     return NextResponse.json({ ok: true })

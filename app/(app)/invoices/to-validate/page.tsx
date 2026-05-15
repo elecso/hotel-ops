@@ -12,7 +12,7 @@ export default async function InvoicesToValidatePage() {
     { data: products },
     { data: mappings },
   ] = await Promise.all([
-    admin.storage.from('invoices').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } }),
+    admin.storage.from('Invoice').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } }),
     supabase.from('suppliers').select('id, name').order('name'),
     supabase.from('products').select('id, name, unit, type').eq('is_active', true).order('name'),
     supabase.from('product_ai_mappings').select('raw_name, product_id').eq('confirmed', true),

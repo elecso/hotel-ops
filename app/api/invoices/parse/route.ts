@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       .upload(fileName, arrayBuffer, { contentType: mediaType })
 
     const fileUrl = storageData?.path
-      ? supabase.storage.from('invoices').getPublicUrl(storageData.path).data.publicUrl
+      ? supabase.storage.from('Invoice').getPublicUrl(storageData.path).data.publicUrl
       : null
 
     // Create invoice record

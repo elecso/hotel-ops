@@ -14,7 +14,7 @@ import type { FbMenuItem, FbBeverageProduct } from './AddFbProductModal'
 
 type MenuItem = FbMenuItem
 type BeverageProduct = FbBeverageProduct
-interface AiMapping { id: number; raw_name: string; product_id: number; confirmed: boolean }
+interface AiMapping { id: number; raw_name: string; product_id: number; sub_product_id?: number | null; confirmed: boolean }
 
 interface ParsedLine {
   raw_name: string
@@ -91,6 +91,10 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const preFillMapping = (rawName: string): { value: string; aiMatched: boolean } => {
     const mapping = confirmedMappings.find(m => m.raw_name.toLowerCase() === rawName.toLowerCase())
     if (mapping) {
+      if (mapping.sub_product_id) {
+        const parent = localBeverages.find(b => b.sub_products.some(sp => sp.id === mapping.sub_product_id))
+        if (parent) return { value: `sub_product:${mapping.sub_product_id}`, aiMatched: true }
+      }
       const menuItem = localMenuItems.find(mi => mi.id === mapping.product_id)
       if (menuItem) return { value: `menu_item:${menuItem.id}`, aiMatched: true }
       const bev = localBeverages.find(b => b.id === mapping.product_id)
@@ -278,9 +282,9 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
             })
             // Decrement stock
             await decrementStock(parentId, adjustedQty, importMonth)
-            // Save AI mapping to parent product
+            // Save AI mapping with sub_product_id so next upload resolves to the sub-product
             await supabase.from('product_ai_mappings').upsert(
-              { raw_name: line.raw_name, product_id: parentId, confirmed: true },
+              { raw_name: line.raw_name, product_id: parentId, sub_product_id: id, confirmed: true },
               { onConflict: 'raw_name' }
             )
           }

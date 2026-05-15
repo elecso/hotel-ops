@@ -647,3 +647,9 @@ CREATE POLICY "staff_fb_stock_insert" ON stock_months
 CREATE POLICY "staff_fb_stock_update" ON stock_months
   FOR UPDATE USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
+
+-- ============================================================
+-- SUB-PRODUCT AI MAPPING (remember which sub-product was chosen)
+-- ============================================================
+ALTER TABLE product_ai_mappings
+  ADD COLUMN IF NOT EXISTS sub_product_id int references beverage_sub_products(id);

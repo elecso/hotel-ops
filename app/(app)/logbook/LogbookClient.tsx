@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import type { LogbookNews, MorningMeeting, ToiletCheck } from '@/lib/types'
-import { ChevronDown, ChevronUp, CalendarDays, CheckCircle, Download } from 'lucide-react'
+import { ChevronDown, ChevronUp, CalendarDays, CheckCircle, Download, Trash2 } from 'lucide-react'
 import { formatDate, isoDate } from '@/lib/utils'
 import * as XLSX from 'xlsx'
 
@@ -25,8 +25,11 @@ interface Props {
   staffNames: string[]
 }
 
-export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staffNames }: Props) {
+const CHECKER_NAMES = ['Fadila', 'HK', 'Autre']
+
+export function LogbookClient({ selectedDate, news: initialNews, meetings, toiletChecks, staffNames: _ }: Props) {
   const router = useRouter()
+  const [news, setNews] = useState<LogbookNews[]>(initialNews)
   const [checks, setChecks] = useState<ToiletCheck[]>(toiletChecks)
   const [meetingOpen, setMeetingOpen] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -102,6 +105,11 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staf
     }
   }
 
+  const handleDeleteNews = async (id: number) => {
+    setNews(prev => prev.filter(n => n.id !== id))
+    await supabase.from('logbook_news').delete().eq('id', id)
+  }
+
   const formatTime = (iso: string | null | undefined) => {
     if (!iso) return null
     return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -156,8 +164,19 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staf
               {news.map(n => (
                 <Card key={n.id} hotel="mercure">
                   <CardHeader>
-                    <CardTitle className="text-base">{n.title}</CardTitle>
-                    {n.source && <p className="text-xs mt-0.5" style={{ color: '#C5C0B1' }}>Source: {n.source}</p>}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-base">{n.title}</CardTitle>
+                        {n.source && <p className="text-xs mt-0.5" style={{ color: '#C5C0B1' }}>Source: {n.source}</p>}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteNews(n.id)}
+                        title="Supprimer cette actualité"
+                        className="p-1 rounded text-[#C5C0B1] hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm whitespace-pre-wrap" style={{ color: '#3D1640' }}>{n.body}</p>
@@ -253,7 +272,7 @@ export function LogbookClient({ selectedDate, news, meetings, toiletChecks, staf
                       className="w-full h-8 rounded-md border border-[#E5E2D8] bg-white px-2 text-xs text-[#3D1640] focus:outline-none focus:ring-1 focus:ring-[#602460]/40"
                     >
                       <option value="">Sélectionner un nom…</option>
-                      {staffNames.map(n => <option key={n} value={n}>{n}</option>)}
+                      {CHECKER_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                     <div className="flex gap-2">
                       <button

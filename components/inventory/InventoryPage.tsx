@@ -38,6 +38,7 @@ function generateMonthOptions() {
 export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, suppliers, categories, roomTypes, isAdmin, salesOnly = false }: Props) {
   const [month, setMonth] = useState(monthProp ?? currentMonth())
   const [rows, setRows] = useState<AnyRow[]>(rowsProp)
+  const [filterCategory, setFilterCategory] = useState<string>('')
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [csvError, setCsvError] = useState('')
@@ -157,11 +158,14 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
   }
 
   const monthOptions = generateMonthOptions()
+  const filteredRows = filterCategory
+    ? rows.filter(r => String(r.product?.category_id) === filterCategory)
+    : rows
 
   return (
     <div className="space-y-4 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {!salesOnly && (
             <Select value={month} onValueChange={handleMonthChange}>
               <SelectTrigger className="w-48">
@@ -170,6 +174,19 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
               <SelectContent>
                 {monthOptions.map(o => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {categories.length > 0 && (
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Toutes catégories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Toutes catégories</SelectItem>
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -218,11 +235,11 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
           <div className="px-5 py-3 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
             Alimentation — suivi des ventes uniquement via F&B Upload. Pas de gestion de stock direct.
           </div>
-          <FoodProductList rows={rows} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} />
+          <FoodProductList rows={filteredRows} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} />
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-[#E5E2D8] overflow-hidden">
-          <InventoryTable rows={rows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} type={type} />
+          <InventoryTable rows={filteredRows} month={month} isAdmin={isAdmin} onRefresh={() => loadRows(month)} suppliers={suppliers} categories={categories} roomTypes={roomTypes} type={type} />
         </div>
       )}
 

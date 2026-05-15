@@ -1,4 +1,4 @@
-import OpenAI, { toFile } from 'openai'
+import OpenAI from 'openai'
 
 let openaiInstance: OpenAI | null = null
 
@@ -6,7 +6,7 @@ function getOpenAI(): OpenAI {
   if (!openaiInstance) {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey || apiKey === 'your_openai_api_key') {
-      throw new Error('OPENAI_API_KEY est manquant ou invalide. Vérifiez vos variables d\'environnement.')
+      throw new Error('OPENAI_API_KEY est manquant ou invalide.')
     }
     openaiInstance = new OpenAI({ apiKey })
   }
@@ -28,101 +28,73 @@ export interface ParsedFbLine {
   qty: number
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function callGptJson<T>(systemPrompt: string, base64Content: string, mediaType: string, textPrefix: string): Promise<T> {
+const INVOICE_SYSTEM_PROMPT = `You are a hotel procurement invoice parser. Extract every line item from the invoice.
+
+Return ONLY a JSON object (no markdown, no explanation):
+{
+  "supplier_name": "vendor name or null",
+  "invoice_date": "YYYY-MM-DD or null",
+  "items": [
+    { "raw_description": "exact product name", "qty": 1.0, "unit": "unit or empty string", "unit_price": 0.00, "total": 0.00 }
+  ]
+}
+
+Rules:
+- Include EVERY product/service line, even if qty or price is missing (use 0)
+- Do NOT include subtotals, taxes, or section headers
+- qty defaults to 1 if not shown; use 0 for unit_price/total if missing
+- raw_description must be the actual product name`
+
+export async function parseInvoiceFile(base64Content: string, mediaType: string): Promise<ParsedInvoiceLine[]> {
   const client = getOpenAI()
   const isPdf = mediaType.includes('pdf')
   const isImage = mediaType.startsWith('image/')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let userContent: any
-  let uploadedFileId: string | null = null
 
-  if (isPdf) {
-    const pdfBuffer = Buffer.from(base64Content, 'base64')
-    const pdfFile = await toFile(pdfBuffer, 'document.pdf', { type: 'application/pdf' })
-    const uploaded = await client.files.create({ file: pdfFile, purpose: 'user_data' })
-    uploadedFileId = uploaded.id
-    userContent = [
-      { type: 'file', file: { file_id: uploaded.id } },
-      { type: 'text', text: textPrefix },
-    ]
-  } else if (isImage) {
+  if (isImage) {
     userContent = [
       { type: 'image_url', image_url: { url: `data:${mediaType};base64,${base64Content}`, detail: 'high' } },
-      { type: 'text', text: textPrefix },
+      { type: 'text', text: 'Extract all line items from this invoice.' },
     ]
+  } else if (isPdf) {
+    // Extract readable text from the PDF buffer (works for non-scanned PDFs)
+    const rawBuf = Buffer.from(base64Content, 'base64')
+    const raw = rawBuf.toString('latin1')
+    // Keep printable ASCII + strip binary noise; grab up to 12 000 chars
+    const text = raw.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/[ \t]{4,}/g, '   ').substring(0, 12000)
+    userContent = `Extract all line items from this invoice.\n\nExtracted PDF text:\n${text}`
   } else {
+    // CSV / plain text
     const rawBuf = Buffer.from(base64Content, 'base64')
     const utf8 = rawBuf.toString('utf-8')
-    const text = utf8.includes('') ? rawBuf.toString('latin1') : utf8
-    userContent = `${textPrefix}\n${text}`
+    const text = utf8.includes('�') ? rawBuf.toString('latin1') : utf8
+    userContent = `Extract all line items from this invoice.\n\n${text}`
   }
 
-  try {
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-    })
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: 4096,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: INVOICE_SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ],
+  })
 
-    const raw = response.choices[0]?.message?.content ?? '{}'
-    return JSON.parse(raw) as T
-  } finally {
-    if (uploadedFileId) {
-      await client.files.del(uploadedFileId).catch(() => {})
-    }
-  }
-}
+  const raw = response.choices[0]?.message?.content ?? '{}'
+  let parsed: { supplier_name?: string; invoice_date?: string; items?: Array<Record<string, unknown>> }
+  try { parsed = JSON.parse(raw) } catch { return [] }
 
-const INVOICE_SYSTEM_PROMPT = `You are a hotel procurement invoice parser. Your task is to extract every line item from the invoice document provided.
-
-Return ONLY a JSON object with this exact structure (no markdown, no explanation):
-{
-  "supplier_name": "supplier or vendor name, or null",
-  "invoice_date": "date in YYYY-MM-DD format, or null",
-  "items": [
-    {
-      "raw_description": "exact product or service name as it appears on the invoice",
-      "qty": 1.0,
-      "unit": "unit of measure (pcs, kg, L, box, etc.) or empty string",
-      "unit_price": 0.00,
-      "total": 0.00
-    }
-  ]
-}
-
-Rules:
-- Include EVERY product/service line item, even if some fields are missing (use 0 for missing numbers, "" for missing text)
-- Do NOT include subtotals, grand totals, taxes, or section headers as items
-- qty defaults to 1 if not shown; unit_price and total default to 0 if not shown
-- raw_description must be the actual product name, not a category label
-- If qty and unit_price are present, total = qty × unit_price`
-
-export async function parseInvoiceFile(base64Content: string, mediaType: string): Promise<ParsedInvoiceLine[]> {
-  const result = await callGptJson<{
-    supplier_name?: string
-    invoice_date?: string
-    items?: Array<Record<string, unknown>>
-  }>(
-    INVOICE_SYSTEM_PROMPT,
-    base64Content,
-    mediaType,
-    'Extract all line items from this invoice and return as a JSON object.'
-  )
-
-  return (result.items ?? []).map(item => ({
+  return (parsed.items ?? []).map(item => ({
     raw_description: String(item.raw_description ?? ''),
     qty: Number(item.qty ?? 1),
     unit: String(item.unit ?? ''),
     unit_price: Number(item.unit_price ?? 0),
     total: Number(item.total ?? 0),
-    supplier_name: String(result.supplier_name ?? item.supplier_name ?? ''),
-    invoice_date: String(result.invoice_date ?? item.invoice_date ?? ''),
+    supplier_name: String(parsed.supplier_name ?? item.supplier_name ?? ''),
+    invoice_date: String(parsed.invoice_date ?? item.invoice_date ?? ''),
   }))
 }
 
@@ -133,14 +105,39 @@ Return ONLY a JSON object: { "items": [{ "raw_name": "product name", "qty": 0.0 
 Include ALL products listed, even those with quantity 0. Do not skip any item.`
 
 export async function parseFbFile(base64Content: string, mediaType: string): Promise<ParsedFbLine[]> {
-  const result = await callGptJson<{ items?: Array<Record<string, unknown>> }>(
-    FB_SYSTEM_PROMPT,
-    base64Content,
-    mediaType,
-    'Extract all items from this F&B sales data and return as a JSON object.'
-  )
+  const client = getOpenAI()
+  const isImage = mediaType.startsWith('image/')
 
-  return (result.items ?? []).map(item => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let userContent: any
+
+  if (isImage) {
+    userContent = [
+      { type: 'image_url', image_url: { url: `data:${mediaType};base64,${base64Content}`, detail: 'high' } },
+      { type: 'text', text: 'Extract all items from this F&B sales data.' },
+    ]
+  } else {
+    const rawBuf = Buffer.from(base64Content, 'base64')
+    const utf8 = rawBuf.toString('utf-8')
+    const text = utf8.includes('�') ? rawBuf.toString('latin1') : utf8
+    userContent = `Extract all items from this F&B sales data:\n\n${text}`
+  }
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: 4096,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: FB_SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ],
+  })
+
+  const raw = response.choices[0]?.message?.content ?? '{}'
+  let parsed: { items?: Array<Record<string, unknown>> }
+  try { parsed = JSON.parse(raw) } catch { return [] }
+
+  return (parsed.items ?? []).map(item => ({
     raw_name: String(item.raw_name ?? ''),
     qty: Number(item.qty ?? 0),
   }))

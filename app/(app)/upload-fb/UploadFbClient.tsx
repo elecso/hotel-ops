@@ -31,12 +31,20 @@ interface N8nImport {
   raw_json: any[]
 }
 
+interface FbHistoryItem {
+  id: number
+  import_date: string
+  source: string | null
+  status: string
+}
+
 interface Props {
   defaultDate: string
   menuItems: MenuItem[]
   beverages: BeverageProduct[]
   confirmedMappings: AiMapping[]
   pendingN8nImports: N8nImport[]
+  fbHistory: FbHistoryItem[]
 }
 
 type Step = 1 | 2 | 3 | 4
@@ -57,7 +65,7 @@ interface CreateProductForm {
   unit: string
 }
 
-export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings, pendingN8nImports }: Props) {
+export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings, pendingN8nImports, fbHistory }: Props) {
   const [step, setStep] = useState<Step>(1)
   const [mode, setMode] = useState<'file' | 'json' | 'n8n'>('file')
   const [date, setDate] = useState(defaultDate)
@@ -174,7 +182,11 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
 
   const handleDeleteN8n = async (id: number) => {
     setN8nImports(prev => prev.filter(imp => imp.id !== id))
-    await supabase.from('fb_imports').delete().eq('id', id)
+    await fetch('/api/fb-imports/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
   }
 
   const updateMapping = (i: number, value: string) =>
@@ -593,6 +605,42 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
             <Button onClick={() => { setStep(1); setFile(null); setLines([]); setLoadedN8nId(null) }}>
               Nouveau upload
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* History */}
+      {fbHistory.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Historique des imports</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {fbHistory.map(h => (
+                  <TableRow key={h.id}>
+                    <TableCell className="font-medium text-sm">{h.import_date}</TableCell>
+                    <TableCell>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: h.source === 'n8n' ? '#ecfeff' : '#f0fdf4', color: h.source === 'n8n' ? '#0891b2' : '#16a34a' }}>
+                        {h.source === 'n8n' ? 'N8N' : 'Fichier'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="validated">Validé</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

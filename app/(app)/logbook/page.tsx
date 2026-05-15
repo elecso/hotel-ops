@@ -24,7 +24,7 @@ export default async function LogbookPage({
     { data: toiletChecks },
     { data: staff },
   ] = await Promise.all([
-    supabase.from('logbook_news').select('*').eq('news_date', selectedDate).order('id', { ascending: false }),
+    supabase.from('logbook_news').select('*').order('id', { ascending: false }),
     supabase.from('morning_meeting').select('*').eq('meeting_date', selectedDate).order('id', { ascending: false }),
     supabase.from('toilet_checks').select('*').eq('check_date', selectedDate),
     supabase.from('staff').select('full_name').eq('is_active', true).order('full_name'),

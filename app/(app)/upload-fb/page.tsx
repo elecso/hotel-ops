@@ -10,6 +10,7 @@ export default async function UploadFbPage() {
     { data: beverages },
     { data: mappings },
     { data: n8nImports },
+    { data: history },
   ] = await Promise.all([
     supabase
       .from('menu_items')
@@ -33,6 +34,12 @@ export default async function UploadFbPage() {
       .eq('status', 'pending')
       .order('import_date', { ascending: false })
       .limit(20),
+    supabase
+      .from('fb_imports')
+      .select('id, import_date, source, status, created_by')
+      .eq('status', 'validated')
+      .order('import_date', { ascending: false })
+      .limit(30),
   ])
 
   const yesterday = isoDate(new Date(Date.now() - 86400000))
@@ -44,6 +51,7 @@ export default async function UploadFbPage() {
       beverages={beverages ?? []}
       confirmedMappings={mappings ?? []}
       pendingN8nImports={n8nImports ?? []}
+      fbHistory={history ?? []}
     />
   )
 }

@@ -51,8 +51,10 @@ interface CreateProductForm {
 
 export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings }: Props) {
   const [step, setStep] = useState<Step>(1)
+  const [mode, setMode] = useState<'file' | 'json'>('file')
   const [date, setDate] = useState(defaultDate)
   const [file, setFile] = useState<File | null>(null)
+  const [jsonText, setJsonText] = useState('')
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -113,6 +115,31 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
       setError((e as Error).message)
     } finally {
       setParsing(false)
+    }
+  }
+
+  const handleParseJson = () => {
+    setError('')
+    if (!jsonText.trim()) { setError('Coller le JSON N8N dans le champ ci-dessus.'); return }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw: any[] = JSON.parse(jsonText)
+      if (!Array.isArray(raw)) throw new Error('Le JSON doit être un tableau [].')
+      const skipForever = getSkipForever()
+      const parsed: ParsedLine[] = raw.map(item => ({
+        // Handle various key names: Produit / produit / product / name / Nom
+        raw_name: String(item.Produit ?? item.produit ?? item.product ?? item.name ?? item.Nom ?? item.nom ?? '').trim(),
+        qty: Number(item.quantity ?? item.qty ?? item.Quantite ?? item.quantite ?? item.Qte ?? 0),
+      })).filter(l => l.raw_name && !skipForever.includes(l.raw_name))
+
+      const mapped: MappedLine[] = parsed.map(line => {
+        const { value, aiMatched } = preFillMapping(line.raw_name)
+        return { ...line, mapped_to: value, ai_matched: aiMatched }
+      })
+      setLines(mapped)
+      setStep(3)
+    } catch (e: unknown) {
+      setError((e as Error).message)
     }
   }
 
@@ -234,10 +261,31 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
         </span>
       </div>
 
-      {/* Step 1 & 2: Date + File */}
+      {/* Step 1 & 2: Date + Input */}
       {step <= 2 && (
         <Card>
-          <CardHeader><CardTitle>Upload ventes F&B</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Upload ventes F&B</CardTitle>
+              {/* Mode toggle */}
+              <div className="flex rounded-lg border border-[#E5E2D8] overflow-hidden text-xs font-semibold">
+                <button
+                  onClick={() => { setMode('file'); setError('') }}
+                  className="px-4 py-1.5 transition-colors"
+                  style={{ background: mode === 'file' ? '#602460' : '#F4F2ED', color: mode === 'file' ? '#fff' : '#7B6B80' }}
+                >
+                  Fichier
+                </button>
+                <button
+                  onClick={() => { setMode('json'); setError('') }}
+                  className="px-4 py-1.5 transition-colors"
+                  style={{ background: mode === 'json' ? '#602460' : '#F4F2ED', color: mode === 'json' ? '#fff' : '#7B6B80' }}
+                >
+                  JSON (N8N)
+                </button>
+              </div>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>Date de vente</Label>
@@ -248,39 +296,62 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                 max={isoDate(new Date())}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Fichier Excel (.xlsx) ou PDF</Label>
-              <div
-                className="border-2 border-dashed border-[#E5E2D8] rounded-xl p-8 text-center cursor-pointer hover:border-[#602460] transition-colors"
-                onClick={() => document.getElementById('fb-upload')?.click()}
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => {
-                  e.preventDefault()
-                  const f = e.dataTransfer.files[0]
-                  if (f) { setFile(f); setStep(2) }
-                }}
-              >
-                <Upload size={24} className="mx-auto mb-2 text-[#B0A5B4]" />
-                {file ? (
-                  <p className="text-sm font-medium text-[#602460]">{file.name}</p>
-                ) : (
-                  <p className="text-sm text-[#B0A5B4]">
-                    Glisser-déposer ou cliquer pour sélectionner un fichier Excel ou PDF
-                  </p>
-                )}
-                <input
-                  id="fb-upload"
-                  type="file"
-                  accept=".pdf,.csv,.xlsx,.xls,.txt"
-                  className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setStep(2) } }}
+
+            {mode === 'file' ? (
+              <div className="space-y-1.5">
+                <Label>Fichier Excel (.xlsx) ou PDF</Label>
+                <div
+                  className="border-2 border-dashed border-[#E5E2D8] rounded-xl p-8 text-center cursor-pointer hover:border-[#602460] transition-colors"
+                  onClick={() => document.getElementById('fb-upload')?.click()}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => {
+                    e.preventDefault()
+                    const f = e.dataTransfer.files[0]
+                    if (f) { setFile(f); setStep(2) }
+                  }}
+                >
+                  <Upload size={24} className="mx-auto mb-2 text-[#B0A5B4]" />
+                  {file ? (
+                    <p className="text-sm font-medium text-[#602460]">{file.name}</p>
+                  ) : (
+                    <p className="text-sm text-[#B0A5B4]">Glisser-déposer ou cliquer pour sélectionner</p>
+                  )}
+                  <input
+                    id="fb-upload"
+                    type="file"
+                    accept=".pdf,.csv,.xlsx,.xls,.txt"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setStep(2) } }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>JSON N8N — coller le tableau ici</Label>
+                <p className="text-xs text-[#B0A5B4]">
+                  Format attendu : <code className="bg-[#F4F2ED] px-1 rounded">{`[{"Produit":"...", "quantity": 5}, ...]`}</code>
+                </p>
+                <textarea
+                  value={jsonText}
+                  onChange={e => setJsonText(e.target.value)}
+                  rows={8}
+                  placeholder={'[\n  {"Produit": "PLAT DU JOUR", "quantity": 12},\n  ...\n]'}
+                  className="w-full rounded-md border border-[#E5E2D8] bg-white px-3 py-2 text-xs font-mono text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#602460]/30 resize-none"
                 />
               </div>
-            </div>
+            )}
+
             {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</div>}
-            <Button onClick={handleParse} disabled={!file || !date || parsing} className="w-full">
-              {parsing ? 'Analyse en cours…' : 'Analyser le fichier →'}
-            </Button>
+
+            {mode === 'file' ? (
+              <Button onClick={handleParse} disabled={!file || !date || parsing} className="w-full">
+                {parsing ? 'Analyse en cours…' : 'Analyser le fichier →'}
+              </Button>
+            ) : (
+              <Button onClick={handleParseJson} disabled={!jsonText.trim() || !date} className="w-full">
+                Importer le JSON →
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

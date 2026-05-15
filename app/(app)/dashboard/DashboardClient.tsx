@@ -136,16 +136,26 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
         <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#C5C0B1' }}>
           Chiffres clés du jour
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <MetricCard
             hotel="mercure"
             label="Mercure Occ."
             value={mercureForecastToday ? formatPct(mercureForecastToday.occupancy_pct) : '—'}
           />
           <MetricCard
+            hotel="mercure"
+            label="Arr. / Dép. Mercure"
+            value={mercureToday ? `${mercureToday.arrivals ?? 0} / ${mercureToday.departures ?? 0}` : '—'}
+          />
+          <MetricCard
             hotel="ibis"
             label="Ibis Occ."
             value={ibisForecastToday ? formatPct(ibisForecastToday.occupancy_pct) : '—'}
+          />
+          <MetricCard
+            hotel="ibis"
+            label="Arr. / Dép. Ibis"
+            value={ibisToday ? `${ibisToday.arrivals ?? 0} / ${ibisToday.departures ?? 0}` : '—'}
           />
           <MetricCard
             color="green"

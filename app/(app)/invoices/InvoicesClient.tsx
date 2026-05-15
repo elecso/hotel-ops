@@ -11,9 +11,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Upload, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency, currentMonth } from '@/lib/utils'
 import { AddProductModal } from '@/components/inventory/AddProductModal'
-import type { ProductCategory, RoomType } from '@/lib/types'
+import type { ProductCategory, RoomType, Supplier } from '@/lib/types'
 
-interface Supplier { id: number; name: string }
 interface Product { id: number; name: string; unit: string; type: string }
 interface AiMapping { raw_name: string; product_id: number; confirmed: boolean }
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, BookOpen, Package, ChefHat, Calendar, Upload, ClipboardList, FileText, Users,
-  LogOut, ChevronDown, ChevronRight, TrendingUp, Shirt, BarChart2, BookMarked,
+  LogOut, ChevronDown, ChevronRight, TrendingUp, Shirt, BarChart2, BookMarked, CalendarCheck2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -18,8 +18,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tableau de bord', href: '/dashboard',           icon: <LayoutDashboard size={16} />, color: '#602460' },
-  { label: 'Logbook',         href: '/logbook',             icon: <BookOpen size={16} />,        color: '#16a34a' },
+  { label: 'Tableau de bord',       href: '/dashboard', icon: <LayoutDashboard size={16} />, color: '#602460' },
+  { label: 'Meetings & Événements', href: '/meeting',  icon: <CalendarCheck2 size={16} />, color: '#0891b2' },
+  { label: 'Logbook',               href: '/logbook',  icon: <BookOpen size={16} />,        color: '#16a34a' },
   { label: 'Tutoriels',       href: '/tutorial',            icon: <BookMarked size={16} />,      color: '#7c3aed' },
   { label: 'Statistique',     href: '/logbook/statistique', icon: <BarChart2 size={16} />,       color: '#0284c7' },
   { label: 'Blanchisserie',   href: '/laundry',             icon: <Shirt size={16} />,           color: '#0ea5e9' },

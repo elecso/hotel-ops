@@ -17,7 +17,7 @@ export default async function InvoicesPage() {
       .select('*, supplier:suppliers(name), lines:invoice_lines(*, product:products(name))')
       .order('upload_date', { ascending: false })
       .limit(30),
-    supabase.from('suppliers').select('id, name').order('name'),
+    supabase.from('suppliers').select('id, name, contact, url').order('name'),
     supabase
       .from('products')
       .select('id, name, unit, type')

@@ -10,6 +10,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Upload, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDate, formatCurrency, currentMonth } from '@/lib/utils'
+import { AddProductModal } from '@/components/inventory/AddProductModal'
+import type { ProductCategory, RoomType } from '@/lib/types'
 
 interface Supplier { id: number; name: string }
 interface Product { id: number; name: string; unit: string; type: string }
@@ -52,6 +54,7 @@ const STATUS_VARIANT: Record<string, 'pending' | 'validated' | 'default'> = {
 
 export function InvoicesClient({ invoices: initial, suppliers, products, confirmedMappings, userId, isManager }: Props) {
   const [invoices, setInvoices] = useState(initial)
+  const [localProducts, setLocalProducts] = useState(products)
   const [file, setFile] = useState<File | null>(null)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [supplierId, setSupplierId] = useState('')
@@ -61,7 +64,26 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
   const [parsedLines, setParsedLines] = useState<ParsedLine[] | null>(null)
   const [pendingInvoiceId, setPendingInvoiceId] = useState<number | null>(null)
   const [expandedInvoice, setExpandedInvoice] = useState<number | null>(null)
+  const [createLineIdx, setCreateLineIdx] = useState<number | null>(null)
+  const [createDefaultName, setCreateDefaultName] = useState('')
+  const [allCategories, setAllCategories] = useState<ProductCategory[]>([])
+  const [allRoomTypes, setAllRoomTypes] = useState<RoomType[]>([])
+  const [metaLoaded, setMetaLoaded] = useState(false)
   const supabase = createClient()
+
+  const handleOpenCreate = async (idx: number, rawDesc: string) => {
+    setCreateLineIdx(idx)
+    setCreateDefaultName(rawDesc)
+    if (!metaLoaded) {
+      const [{ data: cats }, { data: rts }] = await Promise.all([
+        supabase.from('product_categories').select('*').order('name'),
+        supabase.from('room_types').select('*').order('label'),
+      ])
+      setAllCategories(cats ?? [])
+      setAllRoomTypes(rts ?? [])
+      setMetaLoaded(true)
+    }
+  }
 
   const preFill = (rawDesc: string): { productId: number | null; aiMatched: boolean } => {
     const mapping = confirmedMappings.find(m => m.raw_name.toLowerCase() === rawDesc.toLowerCase())
@@ -223,14 +245,21 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
                       <TableRow key={i}>
                         <TableCell className="font-mono text-xs min-w-[200px] break-words">{line.raw_description}</TableCell>
                         <TableCell>
-                          <select
-                            value={line.product_id ?? ''}
-                            onChange={e => updateLine(i, e.target.value ? parseInt(e.target.value) : null)}
-                            className="w-full h-8 rounded border border-[#C5C0B1] bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
-                          >
-                            <option value="">— Non mappé —</option>
-                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                          </select>
+                          <div className="flex items-center gap-1">
+                            <select
+                              value={line.product_id ?? ''}
+                              onChange={e => updateLine(i, e.target.value ? parseInt(e.target.value) : null)}
+                              className="flex-1 h-8 rounded border border-[#C5C0B1] bg-white px-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#7E3A7E]"
+                            >
+                              <option value="">— Non mappé —</option>
+                              {localProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                            <button
+                              onClick={() => handleOpenCreate(i, line.raw_description)}
+                              className="h-8 w-8 flex items-center justify-center rounded border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold flex-shrink-0"
+                              title="Créer un produit"
+                            >+</button>
+                          </div>
                         </TableCell>
                         <TableCell className="font-mono text-xs">{line.qty}</TableCell>
                         <TableCell className="font-mono text-xs">{line.unit_price?.toFixed(2)}</TableCell>
@@ -326,6 +355,26 @@ export function InvoicesClient({ invoices: initial, suppliers, products, confirm
           </Table>
         </CardContent>
       </Card>
+      {createLineIdx !== null && (
+        <AddProductModal
+          open
+          onClose={() => setCreateLineIdx(null)}
+          onSaved={(product) => {
+            if (product) {
+              setLocalProducts(prev => [...prev, { id: product.id, name: product.name, unit: '', type: '' }]
+                .sort((a, b) => a.name.localeCompare(b.name, 'fr')))
+              setParsedLines(prev => prev
+                ? prev.map((l, i) => i === createLineIdx ? { ...l, product_id: product.id } : l)
+                : prev)
+            }
+            setCreateLineIdx(null)
+          }}
+          defaultName={createDefaultName}
+          suppliers={suppliers}
+          categories={allCategories}
+          roomTypes={allRoomTypes}
+        />
+      )}
     </div>
   )
 }

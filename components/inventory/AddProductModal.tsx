@@ -12,8 +12,9 @@ import { Plus, Trash2 } from 'lucide-react'
 interface Props {
   open: boolean
   onClose: () => void
-  onSaved: () => void
-  type: ProductType
+  onSaved: (product?: { id: number; name: string }) => void
+  type?: ProductType
+  defaultName?: string
   suppliers: Supplier[]
   categories: ProductCategory[]
   roomTypes?: RoomType[]
@@ -25,13 +26,26 @@ interface SubProductDraft {
   decrement_factor: string
 }
 
-export function AddProductModal({ open, onClose, onSaved, type, suppliers, categories, roomTypes = [] }: Props) {
+const PRODUCT_TYPE_LABELS: Record<string, string> = {
+  beverage: 'Boissons',
+  food: 'Alimentation',
+  ingredient: 'Ingrédients',
+  room: 'Chambres',
+  cleaning_fb: 'Hygiène F&B',
+  cleaning_general: 'Hygiène Général',
+  meeting: 'Séminaires',
+  laundry: 'Linge',
+}
+
+export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaultName = '', suppliers, categories, roomTypes = [] }: Props) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [selectedType, setSelectedType] = useState<ProductType>(typeProp ?? 'beverage')
+  const type = typeProp ?? selectedType
 
   const [form, setForm] = useState({
-    name: '', sku: '', supplier_id: '', category_id: '',
+    name: defaultName, sku: '', supplier_id: '', category_id: '',
     unit: '', packaging_desc: '', packaging_qty: '',
     price_excl_tax: '', min_stock: '', delivery_days: '',
     purchase_url: '', hotel_scope: 'both' as 'mercure' | 'ibis' | 'both',
@@ -105,6 +119,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
       }).select().single()
 
       if (pErr) throw pErr
+      const createdProduct = product
 
       if (type === 'room' && selectedRoomTypes.length > 0) {
         await supabase.from('product_room_typologies').insert(
@@ -123,7 +138,7 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
         )
       }
 
-      onSaved()
+      onSaved({ id: createdProduct.id, name: createdProduct.name })
       onClose()
     } catch (e: unknown) {
       setError((e as Error).message ?? 'Erreur inconnue')
@@ -164,6 +179,19 @@ export function AddProductModal({ open, onClose, onSaved, type, suppliers, categ
           {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
 
           <div className="grid grid-cols-2 gap-4">
+            {!typeProp && (
+              <div className="col-span-2 space-y-1.5">
+                <Label>Type de produit *</Label>
+                <Select value={selectedType} onValueChange={v => setSelectedType(v as ProductType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PRODUCT_TYPE_LABELS).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="col-span-2 space-y-1.5">
               <Label>Nom *</Label>
               <Input value={form.name} onChange={set('name')} placeholder="Nom du produit" />

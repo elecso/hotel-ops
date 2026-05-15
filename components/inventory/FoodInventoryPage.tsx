@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 
 const OUTLETS = ['lunch', 'dinner', 'bar', 'room_service', 'banquet', 'epicerie'] as const
 const OUTLET_LABELS: Record<string, string> = {
@@ -41,6 +41,15 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
   const [formOutlet, setFormOutlet] = useState('lunch')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Désactiver cet article ?')) return
+    setDeletingId(id)
+    await supabase.from('menu_items').update({ is_active: false }).eq('id', id)
+    setRows(prev => prev.filter(r => r.id !== id))
+    setDeletingId(null)
+  }
 
   const openAdd = () => { setFormName(''); setFormOutlet('lunch'); setError(''); setShowAdd(true) }
   const openEdit = (row: FoodMenuRow) => { setEditItem(row); setFormName(row.name); setFormOutlet(row.outlet ?? 'lunch') }
@@ -145,13 +154,23 @@ export function FoodInventoryPage({ rows: rowsProp, isAdmin, monthLabel }: Props
                 </TableCell>
                 {isAdmin && (
                   <TableCell>
-                    <button
-                      onClick={() => openEdit(row)}
-                      className="text-[#B0A5B4] hover:text-[#602460] p-1 rounded hover:bg-[#602460]/10 transition-colors"
-                      title="Modifier"
-                    >
-                      <Pencil size={14} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEdit(row)}
+                        className="text-[#B0A5B4] hover:text-[#602460] p-1 rounded hover:bg-[#602460]/10 transition-colors"
+                        title="Modifier"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(row.id)}
+                        disabled={deletingId === row.id}
+                        className="text-[#B0A5B4] hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-40"
+                        title="Désactiver"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </TableCell>
                 )}
               </TableRow>

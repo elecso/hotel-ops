@@ -122,6 +122,64 @@ export async function parseInvoiceFile(base64Content: string, mediaType: string)
   }))
 }
 
+export interface ScannedRequisitionLine {
+  name: string
+  qty: number
+}
+
+const REQUISITION_SCAN_PROMPT = `You are a hotel operations assistant. Extract all items from this requisition/request paper.
+
+Return ONLY a JSON object (no markdown, no explanation):
+{ "items": [{ "name": "product name", "qty": 1.0 }] }
+
+Rules:
+- Extract every product/item line requested
+- Use the exact name written on the paper
+- qty defaults to 1 if not shown
+- Do not include headers or totals`
+
+export async function scanRequisitionFile(base64Content: string, mediaType: string): Promise<ScannedRequisitionLine[]> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('OPENAI_API_KEY est manquant')
+
+  const ext = mediaType.includes('pdf') ? 'pdf' : mediaType.includes('png') ? 'png' : 'jpg'
+  const res = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      instructions: REQUISITION_SCAN_PROMPT,
+      input: [
+        {
+          role: 'user',
+          content: [
+            { type: 'input_file', filename: `requisition.${ext}`, file_data: `data:${mediaType};base64,${base64Content}` },
+            { type: 'input_text', text: 'Extract all requested items from this requisition paper and return a JSON object.' },
+          ],
+        },
+      ],
+      text: { format: { type: 'json_object' } },
+    }),
+  })
+
+  if (!res.ok) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errData: any = await res.json().catch(() => ({}))
+    throw new Error(errData?.error?.message ?? `OpenAI Responses API error ${res.status}`)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: any = await res.json()
+  const raw = data.output_text ?? data.output?.[0]?.content?.[0]?.text ?? '{}'
+  let parsed: { items?: Array<Record<string, unknown>> }
+  try { parsed = JSON.parse(raw) } catch { return [] }
+
+  return (parsed.items ?? []).map(item => ({
+    name: String(item.name ?? ''),
+    qty: Number(item.qty ?? 1),
+  }))
+}
+
 const FB_SYSTEM_PROMPT = `You are a restaurant sales analyst. Extract all sold items from this F&B sales file.
 
 Return ONLY a JSON object: { "items": [{ "raw_name": "product name", "qty": 0.0 }] }

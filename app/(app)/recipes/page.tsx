@@ -10,6 +10,7 @@ export default async function RecipesPage() {
   const [
     { data: recipes },
     { data: foodProducts },
+    { data: menuItems },
   ] = await Promise.all([
     supabase
       .from('recipes')
@@ -22,12 +23,18 @@ export default async function RecipesPage() {
       .eq('type', 'ingredient')
       .eq('is_active', true)
       .order('name'),
+    supabase
+      .from('menu_items')
+      .select('id, name, outlet, recipe_id')
+      .eq('is_active', true)
+      .order('name'),
   ])
 
   return (
     <RecipesClient
       recipes={recipes ?? []}
       foodProducts={foodProducts ?? []}
+      allMenuItems={menuItems ?? []}
       isManager={profile?.role === 'admin' || profile?.role === 'manager'}
     />
   )

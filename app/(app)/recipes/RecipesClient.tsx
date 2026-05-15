@@ -13,11 +13,13 @@ import { Plus, Trash2, Edit2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface FoodProduct { id: number; name: string; unit: string }
+interface MenuItemRef { id: number; name: string; outlet: string; recipe_id: number | null }
 interface IngredientDraft { product_id: string; quantity: string; unit: string }
 
 interface Props {
   recipes: Recipe[]
   foodProducts: FoodProduct[]
+  allMenuItems: MenuItemRef[]
   isManager: boolean
 }
 
@@ -34,7 +36,7 @@ interface Recipe {
 
 const OUTLETS = ['Breakfast', 'Déjeuner', 'Dîner', 'Room Service', 'Banquet', 'Bar', 'À l\'épicerie']
 
-export function RecipesClient({ recipes: initialRecipes, foodProducts, isManager }: Props) {
+export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuItems, isManager }: Props) {
   const [recipes, setRecipes] = useState(initialRecipes)
   const [showModal, setShowModal] = useState(false)
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null)
@@ -42,11 +44,13 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, isManager
   const supabase = createClient()
 
   const [form, setForm] = useState({ name: '', outlet: '', portion_size_g: '', selling_price: '' })
+  const [selectedMenuItemId, setSelectedMenuItemId] = useState<string>('')
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([])
 
   const openCreate = () => {
     setEditRecipe(null)
     setForm({ name: '', outlet: '', portion_size_g: '', selling_price: '' })
+    setSelectedMenuItemId('')
     setIngredients([{ product_id: '', quantity: '', unit: '' }])
     setShowModal(true)
   }
@@ -59,6 +63,8 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, isManager
       portion_size_g: String(r.portion_size_g ?? ''),
       selling_price: String(r.selling_price ?? ''),
     })
+    const linked = r.menu_items?.[0]
+    setSelectedMenuItemId(linked ? String(linked.id) : '')
     setIngredients(r.ingredients.map(ing => ({
       product_id: String(ing.product_id),
       quantity: String(ing.quantity),
@@ -103,6 +109,13 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, isManager
             unit: i.unit || null,
           }))
         )
+      }
+
+      // Unlink previously linked menu_item for this recipe
+      await supabase.from('menu_items').update({ recipe_id: null }).eq('recipe_id', recipeId)
+      // Link the selected menu_item
+      if (selectedMenuItemId) {
+        await supabase.from('menu_items').update({ recipe_id: recipeId }).eq('id', parseInt(selectedMenuItemId))
       }
     }
 
@@ -202,6 +215,23 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, isManager
                 <Label>Prix de vente (€)</Label>
                 <Input type="number" step="0.01" value={form.selling_price} onChange={e => setForm(f => ({ ...f, selling_price: e.target.value }))} placeholder="12.50" />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Article du menu lié</Label>
+              <select
+                value={selectedMenuItemId}
+                onChange={e => setSelectedMenuItemId(e.target.value)}
+                className="flex h-9 w-full rounded-[6px] border border-[#C5C0B1] bg-white px-3 py-1 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
+              >
+                <option value="">Aucun lien</option>
+                {allMenuItems.map(mi => (
+                  <option key={mi.id} value={mi.id}>
+                    {mi.name}{mi.outlet ? ` — ${mi.outlet}` : ''}{mi.recipe_id && mi.recipe_id !== editRecipe?.id ? ' (déjà lié)' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-[#B0A5B4]">Quand des ventes F&B sont importées pour cet article, les ingrédients seront décrémentés automatiquement.</p>
             </div>
 
             <div className="space-y-2">

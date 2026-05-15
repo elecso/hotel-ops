@@ -40,6 +40,8 @@ interface FbHistoryItem {
   status: string
 }
 
+interface RecipeIngredient { recipe_id: number; product_id: number; quantity: number }
+
 interface Props {
   defaultDate: string
   menuItems: MenuItem[]
@@ -47,6 +49,7 @@ interface Props {
   confirmedMappings: AiMapping[]
   pendingN8nImports: N8nImport[]
   fbHistory: FbHistoryItem[]
+  recipeIngredients: RecipeIngredient[]
 }
 
 type Step = 1 | 2 | 3 | 4
@@ -62,7 +65,7 @@ function saveSkipForever(list: string[]) {
 
 interface CreateModal { open: boolean; lineIdx: number; defaultName: string }
 
-export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings, pendingN8nImports, fbHistory }: Props) {
+export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMappings, pendingN8nImports, fbHistory, recipeIngredients }: Props) {
   const [step, setStep] = useState<Step>(1)
   const [mode, setMode] = useState<'file' | 'json' | 'n8n'>('file')
   const [date, setDate] = useState(defaultDate)
@@ -252,6 +255,14 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
           await supabase.from('menu_item_sales').insert({
             sale_date: date, menu_item_id: id, quantity: line.qty, fb_import_id: fbImportId,
           })
+          // Decrement ingredients if this menu_item has a linked recipe
+          const menuItem = localMenuItems.find(mi => mi.id === id)
+          if (menuItem?.recipe_id) {
+            const ings = recipeIngredients.filter(ri => ri.recipe_id === menuItem.recipe_id)
+            for (const ing of ings) {
+              await decrementStock(ing.product_id, ing.quantity * line.qty, importMonth)
+            }
+          }
 
         } else if (mapType === 'beverage') {
           // Record the sale

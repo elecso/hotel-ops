@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Plus, Trash2, ClipboardCheck, ChevronDown, ChevronRight, Check, X } from 'lucide-react'
+import { Plus, Trash2, ClipboardCheck, ChevronDown, ChevronRight, Check, X, ScanLine, Loader2 } from 'lucide-react'
 import { formatDate, formatCurrency, currentMonth } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -44,7 +44,7 @@ const STATUS_VARIANT: Record<string, 'pending' | 'validated' | 'rejected'> = {
 
 export function RequisitionsClient({ products, myRequisitions: initial, userId, role }: Props) {
   const [requisitions, setRequisitions] = useState(initial)
-  const [type, setType] = useState('food')
+  const [type, setType] = useState('room')
   const [notes, setNotes] = useState('')
   const [lines, setLines] = useState<ReqLine[]>([{ product_id: '', qty: '' }])
   const [saving, setSaving] = useState(false)
@@ -53,8 +53,20 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
   const [expanded, setExpanded] = useState<number[]>([])
   const [lineQty, setLineQty] = useState<Record<number, string>>({})
   const [processing, setProcessing] = useState<number | null>(null)
+  const [productStocks, setProductStocks] = useState<Record<number, number>>({})
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
   const supabase = createClient()
   const filteredProducts = products.filter(p => !type || p.type === type)
+
+  const fetchStock = async (productId: number) => {
+    if (productStocks[productId] !== undefined) return
+    const month = currentMonth()
+    const { data } = await supabase.from('stock_months').select('opening_stock, bought, used')
+      .eq('product_id', productId).eq('month', month).maybeSingle()
+    const theoretical = data ? (data.opening_stock ?? 0) + (data.bought ?? 0) - (data.used ?? 0) : null
+    if (theoretical !== null) setProductStocks(prev => ({ ...prev, [productId]: theoretical }))
+  }
   const canValidate = role === 'admin' || role === 'manager'
 
   const addLine = () => setLines(prev => [...prev, { product_id: '', qty: '' }])
@@ -99,6 +111,32 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
     setRequisitions(prev => prev.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r))
     setExpanded(prev => prev.filter(x => x !== reqId))
     setProcessing(null)
+  }
+
+  const handleScan = async (file: File) => {
+    setScanning(true)
+    setScanError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/requisitions/scan', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur scan')
+      const scannedItems: { name: string; qty: number }[] = json.items ?? []
+      if (scannedItems.length === 0) { setScanError('Aucun article détecté.'); return }
+      const newLines = scannedItems.map(item => {
+        const match = filteredProducts.find(p =>
+          p.name.toLowerCase().includes(item.name.toLowerCase()) ||
+          item.name.toLowerCase().includes(p.name.toLowerCase())
+        )
+        return { product_id: match ? String(match.id) : '', qty: String(item.qty) }
+      })
+      setLines(newLines)
+    } catch (e: unknown) {
+      setScanError((e as Error).message)
+    } finally {
+      setScanning(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -151,6 +189,18 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
               </Select>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <label className={`flex items-center gap-1.5 cursor-pointer text-xs px-3 py-1.5 rounded-md border border-[#E5E2D8] text-[#7B6B80] hover:bg-[#F4F2ED] transition-colors ${scanning ? 'opacity-50 pointer-events-none' : ''}`}>
+              {scanning ? <Loader2 size={13} className="animate-spin" /> : <ScanLine size={13} />}
+              {scanning ? 'Analyse…' : 'Scanner une fiche'}
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => {
+                const f = e.target.files?.[0]
+                if (f) { handleScan(f); e.target.value = '' }
+              }} />
+            </label>
+            {scanError && <span className="text-xs text-red-500">{scanError}</span>}
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Produits</Label>
@@ -163,7 +213,10 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                   <div className="flex items-center gap-2">
                     <select
                       value={line.product_id}
-                      onChange={e => updateLine(i, 'product_id', e.target.value)}
+                      onChange={e => {
+                        updateLine(i, 'product_id', e.target.value)
+                        if (e.target.value) fetchStock(parseInt(e.target.value))
+                      }}
                       className="flex-1 h-9 rounded-md border border-[#E5E2D8] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#602460]/30 focus:border-[#602460]"
                     >
                       <option value="">Sélectionner un produit…</option>
@@ -184,6 +237,9 @@ export function RequisitionsClient({ products, myRequisitions: initial, userId, 
                         <span>Cond.: <span className="font-semibold text-[#3D1640]">{sel.packaging_desc}</span></span>
                       )}
                       <span>Unité: <span className="font-semibold text-[#3D1640]">{sel.unit}</span></span>
+                      {productStocks[sel.id] !== undefined && (
+                        <span>Stock théo.: <span className={`font-semibold ${productStocks[sel.id] <= 0 ? 'text-red-500' : 'text-[#602460]'}`}>{productStocks[sel.id].toFixed(2)}</span></span>
+                      )}
                     </div>
                   )}
                 </div>

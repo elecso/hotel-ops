@@ -55,7 +55,12 @@ const navItems: NavItem[] = [
       { label: 'Valider',    href: '/requisitions/validate' },
     ],
   },
-  { label: 'Factures',     href: '/invoices',  icon: <FileText size={16} />,     color: '#16a34a' },
+  {
+    label: 'Factures', icon: <FileText size={16} />, color: '#16a34a', children: [
+      { label: 'Import & Mapping', href: '/invoices' },
+      { label: 'À valider', href: '/invoices/to-validate' },
+    ],
+  },
   { label: 'Utilisateurs', href: '/users',     icon: <Users size={16} />,        color: '#7B6B80' },
 ]
 

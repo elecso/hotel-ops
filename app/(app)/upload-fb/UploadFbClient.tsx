@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Upload, CheckCircle, X, EyeOff, Plus, Download } from 'lucide-react'
+import { Upload, CheckCircle, X, EyeOff, Plus, Download, Trash2 } from 'lucide-react'
 import { isoDate } from '@/lib/utils'
 
 interface MenuItem { id: number; name: string; outlet: string; recipe_id: number | null }
@@ -72,6 +72,7 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
   const [createForm, setCreateForm] = useState<CreateProductForm | null>(null)
   const [creating, setCreating] = useState(false)
   const [loadedN8nId, setLoadedN8nId] = useState<number | null>(null)
+  const [n8nImports, setN8nImports] = useState<N8nImport[]>(pendingN8nImports)
   const supabase = createClient()
 
   const buildOptions = (items: MenuItem[], bevs: BeverageProduct[]) => [
@@ -169,6 +170,11 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
     })
     setLines(mapped)
     setStep(3)
+  }
+
+  const handleDeleteN8n = async (id: number) => {
+    setN8nImports(prev => prev.filter(imp => imp.id !== id))
+    await supabase.from('fb_imports').delete().eq('id', id)
   }
 
   const updateMapping = (i: number, value: string) =>
@@ -323,9 +329,9 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                 >
                   <Download size={11} />
                   N8N ↓
-                  {pendingN8nImports.length > 0 && (
+                  {n8nImports.length > 0 && (
                     <span className="ml-1 rounded-full px-1.5 py-0 text-[10px] font-bold" style={{ background: mode === 'n8n' ? 'rgba(255,255,255,0.3)' : '#602460', color: mode === 'n8n' ? '#fff' : '#fff' }}>
-                      {pendingN8nImports.length}
+                      {n8nImports.length}
                     </span>
                   )}
                 </button>
@@ -394,21 +400,30 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
                 <p className="text-xs text-[#B0A5B4]">
                   Imports N8N en attente — cliquer sur une ligne pour charger et mapper les ventes.
                 </p>
-                {pendingN8nImports.length === 0 ? (
+                {n8nImports.length === 0 ? (
                   <p className="text-sm text-center text-[#B0A5B4] py-6 border border-dashed border-[#E5E2D8] rounded-lg">
                     Aucun import N8N en attente.
                   </p>
                 ) : (
                   <div className="divide-y divide-[#E5E2D8] border border-[#E5E2D8] rounded-lg overflow-hidden">
-                    {pendingN8nImports.map(imp => (
+                    {n8nImports.map(imp => (
                       <div key={imp.id} className="flex items-center justify-between px-4 py-3 hover:bg-[#F4F2ED] transition-colors">
                         <div>
                           <p className="text-sm font-medium text-[#3D1640]">{imp.import_date}</p>
                           <p className="text-xs text-[#B0A5B4]">{Array.isArray(imp.raw_json) ? imp.raw_json.length : 0} produits · import #{imp.id}</p>
                         </div>
-                        <Button size="sm" onClick={() => handleLoadN8n(imp)}>
-                          Charger →
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => handleLoadN8n(imp)}>
+                            Charger →
+                          </Button>
+                          <button
+                            onClick={() => handleDeleteN8n(imp.id)}
+                            title="Supprimer cet import"
+                            className="p-1.5 rounded text-[#B0A5B4] hover:text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

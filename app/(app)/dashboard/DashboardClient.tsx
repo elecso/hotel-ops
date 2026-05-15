@@ -145,7 +145,7 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
           <MetricCard
             hotel="mercure"
             label="Arr. / Dép. Mercure"
-            value={mercureToday ? `${mercureToday.arrivals ?? 0} / ${mercureToday.departures ?? 0}` : '—'}
+            value={mercureForecastToday ? `${mercureForecastToday.arrivals ?? 0} / ${mercureForecastToday.departures ?? 0}` : '—'}
           />
           <MetricCard
             hotel="ibis"
@@ -155,7 +155,7 @@ export function DashboardClient({ selectedDate, todayStats, yesterdayStats, toda
           <MetricCard
             hotel="ibis"
             label="Arr. / Dép. Ibis"
-            value={ibisToday ? `${ibisToday.arrivals ?? 0} / ${ibisToday.departures ?? 0}` : '—'}
+            value={ibisForecastToday ? `${ibisForecastToday.arrivals ?? 0} / ${ibisForecastToday.departures ?? 0}` : '—'}
           />
           <MetricCard
             color="green"

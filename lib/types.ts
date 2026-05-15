@@ -86,6 +86,8 @@ export interface ForecastOccupancy {
   hotel_id: string
   occupancy_pct: number
   breakfast_covers: number
+  arrivals: number | null
+  departures: number | null
   created_at: string
 }
 

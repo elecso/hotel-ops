@@ -615,3 +615,7 @@ DROP POLICY IF EXISTS "auth_read_contacts"  ON tutorial_contacts;
 DROP POLICY IF EXISTS "auth_write_contacts" ON tutorial_contacts;
 CREATE POLICY "auth_read_contacts"  ON tutorial_contacts FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "auth_write_contacts" ON tutorial_contacts FOR ALL    USING (auth.role() = 'authenticated');
+
+-- N8N JSON storage on fb_imports
+ALTER TABLE fb_imports ADD COLUMN IF NOT EXISTS source   text;
+ALTER TABLE fb_imports ADD COLUMN IF NOT EXISTS raw_json jsonb;

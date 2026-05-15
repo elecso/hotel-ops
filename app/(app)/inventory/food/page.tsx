@@ -1,28 +1,37 @@
 import { createClient } from '@/lib/supabase/server'
-import { InventoryPage } from '@/components/inventory/InventoryPage'
+import { FoodInventoryPage } from '@/components/inventory/FoodInventoryPage'
 import { loadInventoryData } from '@/lib/inventory-loader'
+import { isoDate, currentMonth } from '@/lib/utils'
 
-export default async function FoodInventoryPage() {
-  const { suppliers, categories, roomTypes, isAdmin } = await loadInventoryData('food')
+export default async function FoodPage() {
+  const { isAdmin } = await loadInventoryData('food')
   const supabase = await createClient()
 
-  const { data: products } = await supabase
-    .from('products')
-    .select('id, name, unit, price_excl_tax, packaging_desc, category:product_categories(name), supplier:suppliers(name)')
-    .eq('type', 'food')
-    .eq('is_active', true)
-    .order('name')
+  const today = isoDate(new Date())
+  const monthStart = currentMonth()
 
-  return (
-    <InventoryPage
-      rows={(products ?? []).map(p => ({ product: p, stock: null, theoretical: 0 }))}
-      month={new Date().toISOString().substring(0, 7) + '-01'}
-      suppliers={suppliers}
-      categories={categories}
-      roomTypes={roomTypes}
-      isAdmin={isAdmin}
-      type="food"
-      salesOnly
-    />
-  )
+  const [{ data: menuItems }, { data: sales }] = await Promise.all([
+    supabase.from('menu_items').select('id, name, outlet').eq('is_active', true).order('name'),
+    supabase
+      .from('menu_item_sales')
+      .select('menu_item_id, quantity')
+      .gte('sale_date', monthStart)
+      .lte('sale_date', today),
+  ])
+
+  const salesByItem: Record<number, number> = {}
+  for (const s of sales ?? []) {
+    salesByItem[s.menu_item_id] = (salesByItem[s.menu_item_id] ?? 0) + Number(s.quantity)
+  }
+
+  const rows = (menuItems ?? []).map(mi => ({
+    id: mi.id as number,
+    name: mi.name as string,
+    outlet: (mi.outlet as string) ?? '',
+    sales_mtd: salesByItem[mi.id as number] ?? 0,
+  }))
+
+  const monthLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+
+  return <FoodInventoryPage rows={rows} isAdmin={isAdmin} monthLabel={monthLabel} />
 }

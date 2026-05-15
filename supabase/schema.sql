@@ -619,3 +619,31 @@ CREATE POLICY "auth_write_contacts" ON tutorial_contacts FOR ALL    USING (auth.
 -- N8N JSON storage on fb_imports
 ALTER TABLE fb_imports ADD COLUMN IF NOT EXISTS source   text;
 ALTER TABLE fb_imports ADD COLUMN IF NOT EXISTS raw_json jsonb;
+
+-- ============================================================
+-- PRODUCT SALES (beverage sales recorded via F&B Upload)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS product_sales (
+  id            bigserial primary key,
+  sale_date     date not null,
+  product_id    int not null references products(id),
+  quantity      numeric not null,
+  fb_import_id  bigint references fb_imports(id),
+  created_at    timestamptz default now()
+);
+
+ALTER TABLE product_sales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "auth_read_product_sales"  ON product_sales;
+DROP POLICY IF EXISTS "staff_write_product_sales" ON product_sales;
+CREATE POLICY "auth_read_product_sales"   ON product_sales FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "staff_write_product_sales" ON product_sales FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Allow staff to insert/update stock_months.used when recording F&B sales
+-- (existing admin_stock_months policy handles admin full access)
+DROP POLICY IF EXISTS "staff_fb_stock_insert" ON stock_months;
+DROP POLICY IF EXISTS "staff_fb_stock_update" ON stock_months;
+CREATE POLICY "staff_fb_stock_insert" ON stock_months
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "staff_fb_stock_update" ON stock_months
+  FOR UPDATE USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');

@@ -89,7 +89,7 @@ export async function parseInvoiceFile(base64Content: string, mediaType: string)
 
   if (isPdf || isImage) {
     // Responses API natively understands PDFs and images — no text extraction needed
-    raw = await callResponsesAPI(base64Content, mediaType, 'Extract all line items from this invoice.')
+    raw = await callResponsesAPI(base64Content, mediaType, 'Extract all line items from this invoice and return a JSON object.')
   } else {
     // CSV / plain text — Chat Completions is sufficient
     const rawBuf = Buffer.from(base64Content, 'base64')

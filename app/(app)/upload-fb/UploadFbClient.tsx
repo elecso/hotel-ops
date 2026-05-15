@@ -211,6 +211,20 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
     ))
   }
 
+  const decrementStock = async (productId: number, qty: number, month: string) => {
+    const { data: sm } = await supabase
+      .from('stock_months')
+      .select('id, used')
+      .eq('product_id', productId)
+      .eq('month', month)
+      .maybeSingle()
+    if (sm) {
+      await supabase.from('stock_months').update({ used: (sm.used ?? 0) + qty }).eq('id', sm.id)
+    } else {
+      await supabase.from('stock_months').insert({ product_id: productId, month, opening_stock: 0, bought: 0, used: qty })
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setError('')
@@ -223,27 +237,53 @@ export function UploadFbClient({ defaultDate, menuItems, beverages, confirmedMap
         .single()
 
       const fbImportId = fbImport?.id
+      const importMonth = date.substring(0, 7) + '-01'
 
       for (const line of lines) {
         if (!line.mapped_to) continue
-
         const [mapType, mapId] = line.mapped_to.split(':')
+        const id = parseInt(mapId)
 
         if (mapType === 'menu_item') {
           await supabase.from('menu_item_sales').insert({
-            sale_date: date,
-            menu_item_id: parseInt(mapId),
-            quantity: line.qty,
-            fb_import_id: fbImportId,
+            sale_date: date, menu_item_id: id, quantity: line.qty, fb_import_id: fbImportId,
           })
-        }
 
-        const productId = parseInt(mapId)
-        if (productId) {
+        } else if (mapType === 'beverage') {
+          // Record the sale
+          await supabase.from('product_sales').insert({
+            sale_date: date, product_id: id, quantity: line.qty, fb_import_id: fbImportId,
+          })
+          // Decrement stock
+          await decrementStock(id, line.qty, importMonth)
+          // Save AI mapping
           await supabase.from('product_ai_mappings').upsert(
-            { raw_name: line.raw_name, product_id: productId, confirmed: true },
+            { raw_name: line.raw_name, product_id: id, confirmed: true },
             { onConflict: 'raw_name' }
           )
+
+        } else if (mapType === 'sub_product') {
+          // Find parent beverage and decrement factor
+          let parentId: number | null = null
+          let factor = 1
+          for (const bev of localBeverages) {
+            const sp = bev.sub_products.find(s => s.id === id)
+            if (sp) { parentId = bev.id; factor = sp.decrement_factor ?? 1; break }
+          }
+          if (parentId) {
+            const adjustedQty = Math.round(line.qty * factor * 1000) / 1000
+            // Record the sale in parent product units
+            await supabase.from('product_sales').insert({
+              sale_date: date, product_id: parentId, quantity: adjustedQty, fb_import_id: fbImportId,
+            })
+            // Decrement stock
+            await decrementStock(parentId, adjustedQty, importMonth)
+            // Save AI mapping to parent product
+            await supabase.from('product_ai_mappings').upsert(
+              { raw_name: line.raw_name, product_id: parentId, confirmed: true },
+              { onConflict: 'raw_name' }
+            )
+          }
         }
       }
 

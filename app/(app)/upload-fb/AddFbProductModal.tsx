@@ -23,9 +23,14 @@ interface Props {
   onCreatedBeverage: (lineIdx: number, bev: FbBeverageProduct) => void
 }
 
-const OUTLETS = ['lunch', 'dinner', 'bar', 'room_service', 'banquet'] as const
+const OUTLETS = ['lunch', 'dinner', 'bar', 'room_service', 'banquet', 'epicerie'] as const
 const OUTLET_LABELS: Record<string, string> = {
-  lunch: 'Déjeuner', dinner: 'Dîner', bar: 'Bar', room_service: 'Room Service', banquet: 'Banquet',
+  lunch: 'Déjeuner',
+  dinner: 'Dîner',
+  bar: 'Bar',
+  room_service: 'Room Service',
+  banquet: 'Banquet',
+  epicerie: "L'Épicerie",
 }
 
 const VIN_SUB_PRODUCTS: SubProductDraft[] = [
@@ -35,10 +40,14 @@ const VIN_SUB_PRODUCTS: SubProductDraft[] = [
   { name: 'Verre 8CL',   volume_cl: '8',  decrement_factor: '0.1'  },
 ]
 
-const EMPTY_FORM = {
+const EMPTY_BEV_FORM = {
   name: '', sku: '', supplier_id: '', category_id: '',
   unit: '', packaging_desc: '', packaging_qty: '',
   price_excl_tax: '', min_stock: '', delivery_days: '', purchase_url: '',
+}
+
+const EMPTY_FOOD_EXTRA = {
+  supplier_id: '', category_id: '', unit: '', packaging_desc: '', packaging_qty: '', price_excl_tax: '',
 }
 
 export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreatedMenuItem, onCreatedBeverage }: Props) {
@@ -49,11 +58,16 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [categories, setCategories] = useState<Category[]>([])
 
+  // Food fields
   const [foodName, setFoodName] = useState('')
   const [outlet, setOutlet] = useState('lunch')
+  const [foodExtra, setFoodExtra] = useState(EMPTY_FOOD_EXTRA)
 
-  const [form, setForm] = useState(EMPTY_FORM)
+  // Beverage fields
+  const [bevForm, setBevForm] = useState(EMPTY_BEV_FORM)
   const [subProducts, setSubProducts] = useState<SubProductDraft[]>([])
+
+  // Inline create helpers (shared)
   const [showNewSupplier, setShowNewSupplier] = useState(false)
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newSupplierName, setNewSupplierName] = useState('')
@@ -62,17 +76,19 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
   useEffect(() => {
     if (!open) return
     setFoodName(defaultName)
-    setForm({ ...EMPTY_FORM, name: defaultName })
+    setBevForm({ ...EMPTY_BEV_FORM, name: defaultName })
+    setFoodExtra(EMPTY_FOOD_EXTRA)
     setKind('food')
     setOutlet('lunch')
     setSubProducts([])
     setError('')
     setShowNewSupplier(false)
     setShowNewCategory(false)
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Promise.all([
       supabase.from('suppliers').select('id, name').order('name'),
-      supabase.from('product_categories').select('id, name, type').eq('type', 'beverage').order('name'),
+      supabase.from('product_categories').select('id, name, type').order('name'),
     ]).then(([{ data: sup }, { data: cat }]) => {
       setSuppliers((sup as Supplier[]) ?? [])
       setCategories((cat as Category[]) ?? [])
@@ -80,11 +96,14 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultName])
 
-  const set = (key: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(f => ({ ...f, [key]: e.target.value }))
+  const setBev = (key: keyof typeof EMPTY_BEV_FORM) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setBevForm(f => ({ ...f, [key]: e.target.value }))
 
-  const handleCategoryChange = (v: string) => {
-    setForm(f => ({ ...f, category_id: v }))
+  const setFood = (key: keyof typeof EMPTY_FOOD_EXTRA) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setFoodExtra(f => ({ ...f, [key]: e.target.value }))
+
+  const handleBevCategoryChange = (v: string) => {
+    setBevForm(f => ({ ...f, category_id: v }))
     const cat = categories.find(c => String(c.id) === v)
     if (cat?.name?.toLowerCase().includes('vin')) setSubProducts(VIN_SUB_PRODUCTS)
   }
@@ -94,7 +113,8 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
     const { data } = await supabase.from('suppliers').insert({ name: newSupplierName }).select().single()
     if (data) {
       setSuppliers(prev => [...prev, data as Supplier])
-      setForm(f => ({ ...f, supplier_id: String(data.id) }))
+      if (kind === 'food') setFoodExtra(f => ({ ...f, supplier_id: String(data.id) }))
+      else setBevForm(f => ({ ...f, supplier_id: String(data.id) }))
       setNewSupplierName('')
       setShowNewSupplier(false)
     }
@@ -102,10 +122,11 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
 
   const handleCreateCategory = async () => {
     if (!newCategoryName) return
-    const { data } = await supabase.from('product_categories').insert({ name: newCategoryName, type: 'beverage' }).select().single()
+    const { data } = await supabase.from('product_categories').insert({ name: newCategoryName, type: kind }).select().single()
     if (data) {
       setCategories(prev => [...prev, data as Category])
-      setForm(f => ({ ...f, category_id: String(data.id) }))
+      if (kind === 'food') setFoodExtra(f => ({ ...f, category_id: String(data.id) }))
+      else setBevForm(f => ({ ...f, category_id: String(data.id) }))
       setNewCategoryName('')
       setShowNewCategory(false)
     }
@@ -122,6 +143,21 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
     try {
       if (kind === 'food') {
         if (!foodName.trim()) throw new Error('Le nom est obligatoire')
+
+        // Insert into products table so the item appears in /inventory/food
+        await supabase.from('products').insert({
+          name: foodName.trim(),
+          type: 'food',
+          is_active: true,
+          supplier_id: foodExtra.supplier_id ? parseInt(foodExtra.supplier_id) : null,
+          category_id: foodExtra.category_id ? parseInt(foodExtra.category_id) : null,
+          unit: foodExtra.unit || null,
+          packaging_desc: foodExtra.packaging_desc || null,
+          packaging_qty: foodExtra.packaging_qty ? parseFloat(foodExtra.packaging_qty) : null,
+          price_excl_tax: foodExtra.price_excl_tax ? parseFloat(foodExtra.price_excl_tax) : null,
+        })
+
+        // Insert into menu_items so F&B upload can map sales to it
         const { data } = await supabase
           .from('menu_items')
           .insert({ name: foodName.trim(), outlet, is_active: true })
@@ -129,20 +165,20 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
           .single()
         if (data) onCreatedMenuItem(lineIdx, data as FbMenuItem)
       } else {
-        if (!form.name.trim()) throw new Error('Le nom est obligatoire')
+        if (!bevForm.name.trim()) throw new Error('Le nom est obligatoire')
         const { data: product, error: pErr } = await supabase.from('products').insert({
-          name: form.name,
-          sku: form.sku || null,
-          supplier_id: form.supplier_id ? parseInt(form.supplier_id) : null,
-          category_id: form.category_id ? parseInt(form.category_id) : null,
+          name: bevForm.name,
+          sku: bevForm.sku || null,
+          supplier_id: bevForm.supplier_id ? parseInt(bevForm.supplier_id) : null,
+          category_id: bevForm.category_id ? parseInt(bevForm.category_id) : null,
           type: 'beverage',
-          unit: form.unit || null,
-          packaging_desc: form.packaging_desc || null,
-          packaging_qty: form.packaging_qty ? parseFloat(form.packaging_qty) : null,
-          price_excl_tax: form.price_excl_tax ? parseFloat(form.price_excl_tax) : null,
-          min_stock: form.min_stock ? parseFloat(form.min_stock) : null,
-          delivery_days: form.delivery_days ? parseInt(form.delivery_days) : null,
-          purchase_url: form.purchase_url || null,
+          unit: bevForm.unit || null,
+          packaging_desc: bevForm.packaging_desc || null,
+          packaging_qty: bevForm.packaging_qty ? parseFloat(bevForm.packaging_qty) : null,
+          price_excl_tax: bevForm.price_excl_tax ? parseFloat(bevForm.price_excl_tax) : null,
+          min_stock: bevForm.min_stock ? parseFloat(bevForm.min_stock) : null,
+          delivery_days: bevForm.delivery_days ? parseInt(bevForm.delivery_days) : null,
+          purchase_url: bevForm.purchase_url || null,
         }).select().single()
         if (pErr) throw pErr
 
@@ -174,7 +210,61 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
     }
   }
 
-  const canSave = kind === 'food' ? !!foodName.trim() : !!form.name.trim()
+  const canSave = kind === 'food' ? !!foodName.trim() : !!bevForm.name.trim()
+  const foodCategories = categories.filter(c => c.type === 'food')
+  const bevCategories = categories.filter(c => c.type === 'beverage')
+
+  const SupplierSelect = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <div className="space-y-1.5">
+      <Label>Fournisseur</Label>
+      <div className="flex items-center gap-1">
+        <div className="flex-1">
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+            <SelectContent>
+              {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <button type="button" onClick={() => setShowNewSupplier(v => !v)}
+          className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 transition-colors text-lg font-bold"
+          title="Nouveau fournisseur">+</button>
+      </div>
+      {showNewSupplier && (
+        <div className="flex items-center gap-1 mt-1">
+          <Input placeholder="Nom du fournisseur" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)}
+            className="flex-1 h-8 text-xs" onKeyDown={e => { if (e.key === 'Enter') handleCreateSupplier() }} />
+          <Button type="button" size="sm" className="h-8 text-xs" disabled={!newSupplierName} onClick={handleCreateSupplier}>Créer</Button>
+        </div>
+      )}
+    </div>
+  )
+
+  const CategorySelect = ({ value, onChange, cats }: { value: string; onChange: (v: string) => void; cats: Category[] }) => (
+    <div className="space-y-1.5">
+      <Label>Catégorie</Label>
+      <div className="flex items-center gap-1">
+        <div className="flex-1">
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+            <SelectContent>
+              {cats.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <button type="button" onClick={() => setShowNewCategory(v => !v)}
+          className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 transition-colors text-lg font-bold"
+          title="Nouvelle catégorie">+</button>
+      </div>
+      {showNewCategory && (
+        <div className="flex items-center gap-1 mt-1">
+          <Input placeholder="Nom de la catégorie" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
+            className="flex-1 h-8 text-xs" onKeyDown={e => { if (e.key === 'Enter') handleCreateCategory() }} />
+          <Button type="button" size="sm" className="h-8 text-xs" disabled={!newCategoryName} onClick={handleCreateCategory}>Créer</Button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <Dialog open={open} onOpenChange={o => !o && onClose()}>
@@ -189,20 +279,14 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
           <div className="space-y-1.5">
             <Label>Type de produit</Label>
             <div className="flex rounded-lg border border-[#E5E2D8] overflow-hidden text-sm">
-              <button
-                type="button"
-                onClick={() => setKind('food')}
+              <button type="button" onClick={() => setKind('food')}
                 className="flex-1 px-4 py-2 transition-colors font-medium"
-                style={{ background: kind === 'food' ? '#602460' : '#F4F2ED', color: kind === 'food' ? '#fff' : '#7B6B80' }}
-              >
+                style={{ background: kind === 'food' ? '#602460' : '#F4F2ED', color: kind === 'food' ? '#fff' : '#7B6B80' }}>
                 Alimentation (Menu)
               </button>
-              <button
-                type="button"
-                onClick={() => setKind('beverage')}
+              <button type="button" onClick={() => setKind('beverage')}
                 className="flex-1 px-4 py-2 transition-colors font-medium"
-                style={{ background: kind === 'beverage' ? '#602460' : '#F4F2ED', color: kind === 'beverage' ? '#fff' : '#7B6B80' }}
-              >
+                style={{ background: kind === 'beverage' ? '#602460' : '#F4F2ED', color: kind === 'beverage' ? '#fff' : '#7B6B80' }}>
                 Boisson
               </button>
             </div>
@@ -223,97 +307,64 @@ export function AddFbProductModal({ open, lineIdx, defaultName, onClose, onCreat
                   </SelectContent>
                 </Select>
               </div>
+              <SupplierSelect value={foodExtra.supplier_id} onChange={v => setFoodExtra(f => ({ ...f, supplier_id: v }))} />
+              <CategorySelect value={foodExtra.category_id} onChange={v => setFoodExtra(f => ({ ...f, category_id: v }))} cats={foodCategories} />
+              <div className="space-y-1.5">
+                <Label>Unité</Label>
+                <Input value={foodExtra.unit} onChange={setFood('unit')} placeholder="pcs, kg, L..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Conditionnement</Label>
+                <Input value={foodExtra.packaging_desc} onChange={setFood('packaging_desc')} placeholder="Carton 24 pcs" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Qté par cond.</Label>
+                <Input type="number" value={foodExtra.packaging_qty} onChange={setFood('packaging_qty')} placeholder="24" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Prix HT (€)</Label>
+                <Input type="number" value={foodExtra.price_excl_tax} onChange={setFood('price_excl_tax')} placeholder="0.00" step="0.01" />
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <Label>Nom *</Label>
-                <Input value={form.name} onChange={set('name')} placeholder="Nom du produit" />
+                <Input value={bevForm.name} onChange={setBev('name')} placeholder="Nom du produit" />
               </div>
               <div className="space-y-1.5">
                 <Label>SKU / Référence</Label>
-                <Input value={form.sku} onChange={set('sku')} placeholder="REF-001" />
+                <Input value={bevForm.sku} onChange={setBev('sku')} placeholder="REF-001" />
               </div>
-
-              <div className="space-y-1.5">
-                <Label>Fournisseur</Label>
-                <div className="flex items-center gap-1">
-                  <div className="flex-1">
-                    <Select value={form.supplier_id} onValueChange={v => setForm(f => ({ ...f, supplier_id: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewSupplier(v => !v)}
-                    className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold"
-                    title="Nouveau fournisseur"
-                  >+</button>
-                </div>
-                {showNewSupplier && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Input placeholder="Nom du fournisseur" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} className="flex-1 h-8 text-xs" onKeyDown={e => { if (e.key === 'Enter') handleCreateSupplier() }} />
-                    <Button type="button" size="sm" className="h-8 text-xs" disabled={!newSupplierName} onClick={handleCreateSupplier}>Créer</Button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Catégorie</Label>
-                <div className="flex items-center gap-1">
-                  <div className="flex-1">
-                    <Select value={form.category_id} onValueChange={handleCategoryChange}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                      <SelectContent>
-                        {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewCategory(v => !v)}
-                    className="h-9 w-9 flex items-center justify-center rounded-md border border-[#E5E2D8] bg-[#F4F2ED] text-[#602460] hover:bg-[#602460]/10 hover:border-[#602460]/40 transition-colors text-lg font-bold"
-                    title="Nouvelle catégorie"
-                  >+</button>
-                </div>
-                {showNewCategory && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Input placeholder="Nom de la catégorie" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="flex-1 h-8 text-xs" onKeyDown={e => { if (e.key === 'Enter') handleCreateCategory() }} />
-                    <Button type="button" size="sm" className="h-8 text-xs" disabled={!newCategoryName} onClick={handleCreateCategory}>Créer</Button>
-                  </div>
-                )}
-              </div>
-
+              <SupplierSelect value={bevForm.supplier_id} onChange={v => setBevForm(f => ({ ...f, supplier_id: v }))} />
+              <CategorySelect value={bevForm.category_id} onChange={handleBevCategoryChange} cats={bevCategories} />
               <div className="space-y-1.5">
                 <Label>Unité</Label>
-                <Input value={form.unit} onChange={set('unit')} placeholder="pcs, kg, L..." />
+                <Input value={bevForm.unit} onChange={setBev('unit')} placeholder="pcs, kg, L..." />
               </div>
               <div className="space-y-1.5">
                 <Label>Conditionnement</Label>
-                <Input value={form.packaging_desc} onChange={set('packaging_desc')} placeholder="Carton 24 pcs" />
+                <Input value={bevForm.packaging_desc} onChange={setBev('packaging_desc')} placeholder="Carton 24 pcs" />
               </div>
               <div className="space-y-1.5">
                 <Label>Qté par cond.</Label>
-                <Input type="number" value={form.packaging_qty} onChange={set('packaging_qty')} placeholder="24" />
+                <Input type="number" value={bevForm.packaging_qty} onChange={setBev('packaging_qty')} placeholder="24" />
               </div>
               <div className="space-y-1.5">
                 <Label>Prix HT (€)</Label>
-                <Input type="number" value={form.price_excl_tax} onChange={set('price_excl_tax')} placeholder="0.00" step="0.01" />
+                <Input type="number" value={bevForm.price_excl_tax} onChange={setBev('price_excl_tax')} placeholder="0.00" step="0.01" />
               </div>
               <div className="space-y-1.5">
                 <Label>Stock minimum</Label>
-                <Input type="number" value={form.min_stock} onChange={set('min_stock')} placeholder="10" />
+                <Input type="number" value={bevForm.min_stock} onChange={setBev('min_stock')} placeholder="10" />
               </div>
               <div className="space-y-1.5">
                 <Label>Délai livraison (jours)</Label>
-                <Input type="number" value={form.delivery_days} onChange={set('delivery_days')} placeholder="3" />
+                <Input type="number" value={bevForm.delivery_days} onChange={setBev('delivery_days')} placeholder="3" />
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label>URL commande</Label>
-                <Input value={form.purchase_url} onChange={set('purchase_url')} placeholder="https://..." type="url" />
+                <Input value={bevForm.purchase_url} onChange={setBev('purchase_url')} placeholder="https://..." type="url" />
               </div>
 
               <div className="col-span-2 space-y-2">

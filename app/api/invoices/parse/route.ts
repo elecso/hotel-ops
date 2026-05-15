@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
-import { parseInvoiceWithGemini } from '@/lib/gemini'
+import { parseInvoiceFile } from '@/lib/openai'
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
       status: 'ai_processed',
     }).select().single()
 
-    // Parse with Gemini
-    const lines = await parseInvoiceWithGemini(base64, mediaType)
+    // Parse with OpenAI
+    const lines = await parseInvoiceFile(base64, mediaType)
 
     // Calculate total
     const total = lines.reduce((sum: number, l: { total?: number }) => sum + (l.total ?? 0), 0)

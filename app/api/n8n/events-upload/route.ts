@@ -15,16 +15,24 @@ function getType(room: string): 'meeting' | 'banqueting' | 'event' {
   return 'meeting'
 }
 
-// Parse "DD/MM/YYYY" → "YYYY-MM-DD"
+// Parse "DD/MM/YYYY" or "YYYY-MM-DD" → "YYYY-MM-DD"
 function parseDate(d: string): string | null {
+  if (!d) return null
+  d = d.trim()
+  // Already ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+  // DD/MM/YYYY
   const parts = d.split('/')
-  if (parts.length !== 3) return null
-  const [day, month, year] = parts
-  if (!day || !month || !year) return null
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  if (parts.length === 3) {
+    const [day, month, year] = parts
+    if (year.length === 4) return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    // MM/DD/YYYY fallback — detect by year position
+    if (day.length === 4) return `${day}-${month.padStart(2, '0')}-${parts[2].padStart(2, '0')}`
+  }
+  return null
 }
 
-// Extract person count from strings like "42 pax", "26#", "15 pers"
+// Extract person count: "42 pax", "26#", "15 pers"
 function extractPersons(details: string): number | null {
   const m = details.match(/(\d+)\s*(?:pax|pers(?:onnes?)?|#)/i)
   return m ? parseInt(m[1]) : null
@@ -36,15 +44,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { items?: unknown }
+  let body: unknown
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (!Array.isArray(body.items)) {
-    return NextResponse.json({ error: 'Body must contain { items: [...] }' }, { status: 400 })
+  // Accept either { items: [...] } or a raw array [...]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let items: any[]
+  if (Array.isArray(body)) {
+    items = body
+  } else if (body && typeof body === 'object' && Array.isArray((body as { items?: unknown }).items)) {
+    items = (body as { items: unknown[] }).items
+  } else {
+    return NextResponse.json({
+      error: 'Body must be an array [...] or { items: [...] }',
+      received: typeof body,
+    }, { status: 400 })
+  }
+
+  if (items.length === 0) {
+    return NextResponse.json({ ok: true, inserted: 0, message: 'Empty items array' })
   }
 
   const supabase = createClient(
@@ -52,45 +74,53 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const items = body.items as any[]
-
-  // Collect unique dates in this batch to delete stale events before re-inserting
   const dates = new Set<string>()
   const rows: { event_date: string; event_name: string; room: string; persons: number | null; type: string }[] = []
+  const skipped: string[] = []
 
   for (const item of items) {
-    const rawDate = String(item.date ?? '')
+    // Support date / Date / event_date keys
+    const rawDate = String(item.date ?? item.Date ?? item.event_date ?? '')
     const isoDate = parseDate(rawDate)
-    if (!isoDate) continue
+    if (!isoDate) { skipped.push(`bad date: "${rawDate}"`); continue }
 
-    const location = String(item.location ?? '').trim()
-    const details  = String(item.details  ?? '').trim()
-    if (!location && !details) continue
+    // Support location / Location / room / salle keys
+    const location = String(item.location ?? item.Location ?? item.room ?? item.salle ?? '').trim()
+    // Support details / Details / event_name / nom keys
+    const details  = String(item.details ?? item.Details ?? item.event_name ?? item.nom ?? '').trim()
+
+    if (!location && !details) { skipped.push(`empty row for ${isoDate}`); continue }
 
     dates.add(isoDate)
     rows.push({
       event_date: isoDate,
       event_name: details || location,
-      room:       location,
+      room:       location || details,
       persons:    extractPersons(details),
-      type:       getType(location),
+      type:       getType(location || details),
     })
   }
 
   if (rows.length === 0) {
-    return NextResponse.json({ ok: true, inserted: 0 })
+    return NextResponse.json({ ok: false, inserted: 0, skipped, message: 'No valid rows parsed — check date format (DD/MM/YYYY) and field names (date, location, details)' })
   }
 
-  // Delete existing events for all dates in this batch, then re-insert
+  // Delete existing events for all dates in batch, then re-insert
   for (const d of dates) {
-    await supabase.from('events').delete().eq('event_date', d)
+    const { error: delErr } = await supabase.from('events').delete().eq('event_date', d)
+    if (delErr) return NextResponse.json({ error: `Delete failed for ${d}: ${delErr.message}` }, { status: 500 })
   }
 
   const { error, count } = await supabase
     .from('events')
     .insert(rows, { count: 'exact' })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, inserted: count ?? rows.length })
+  if (error) return NextResponse.json({ error: error.message, rows_attempted: rows.length }, { status: 500 })
+
+  return NextResponse.json({
+    ok: true,
+    inserted: count ?? rows.length,
+    dates: [...dates],
+    skipped: skipped.length ? skipped : undefined,
+  })
 }

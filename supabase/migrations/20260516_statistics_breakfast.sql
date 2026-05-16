@@ -10,12 +10,14 @@ ALTER TABLE daily_stats
   ADD COLUMN IF NOT EXISTS adr numeric(10,2);
 
 -- 2. Add 'breakfast' to product type enums
--- Uses DO block to find actual constraint names (auto-generated names vary)
+-- Dynamically builds constraint from existing data + new values so it never
+-- fails regardless of what types are already in the table.
 DO $$
 DECLARE
   v_constraint text;
+  v_type_list  text;
 BEGIN
-  -- products.type
+  -- ── products ──────────────────────────────────────────────────────────────
   SELECT conname INTO v_constraint
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -25,7 +27,17 @@ BEGIN
     EXECUTE 'ALTER TABLE products DROP CONSTRAINT ' || quote_ident(v_constraint);
   END IF;
 
-  -- product_categories.type
+  SELECT string_agg(DISTINCT quote_literal(type), ',') INTO v_type_list
+  FROM (
+    SELECT type FROM products WHERE type IS NOT NULL
+    UNION VALUES ('room'),('beverage'),('food'),('cleaning_fb'),
+                 ('cleaning_general'),('meeting'),('laundry'),
+                 ('ingredient'),('breakfast')
+  ) t(type);
+
+  EXECUTE 'ALTER TABLE products ADD CONSTRAINT products_type_check CHECK (type IN (' || v_type_list || '))';
+
+  -- ── product_categories ────────────────────────────────────────────────────
   SELECT conname INTO v_constraint
   FROM pg_constraint c
   JOIN pg_class t ON t.oid = c.conrelid
@@ -34,13 +46,17 @@ BEGIN
   IF v_constraint IS NOT NULL THEN
     EXECUTE 'ALTER TABLE product_categories DROP CONSTRAINT ' || quote_ident(v_constraint);
   END IF;
+
+  SELECT string_agg(DISTINCT quote_literal(type), ',') INTO v_type_list
+  FROM (
+    SELECT type FROM product_categories WHERE type IS NOT NULL
+    UNION VALUES ('room'),('beverage'),('food'),('cleaning_fb'),
+                 ('cleaning_general'),('meeting'),('laundry'),
+                 ('ingredient'),('breakfast')
+  ) t(type);
+
+  EXECUTE 'ALTER TABLE product_categories ADD CONSTRAINT product_categories_type_check CHECK (type IN (' || v_type_list || '))';
 END $$;
-
-ALTER TABLE products ADD CONSTRAINT products_type_check
-  CHECK (type IN ('room','beverage','food','cleaning_fb','cleaning_general','meeting','laundry','ingredient','breakfast'));
-
-ALTER TABLE product_categories ADD CONSTRAINT product_categories_type_check
-  CHECK (type IN ('room','beverage','food','cleaning_fb','cleaning_general','meeting','laundry','ingredient','breakfast'));
 
 -- 3. Add 'category' column to recipes
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS category text

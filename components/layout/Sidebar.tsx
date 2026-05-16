@@ -22,15 +22,21 @@ const navItems: NavItem[] = [
   { label: 'Meetings & Événements', href: '/meeting',  icon: <CalendarCheck2 size={16} />, color: '#0891b2' },
   { label: 'Logbook',               href: '/logbook',  icon: <BookOpen size={16} />,        color: '#16a34a' },
   { label: 'Tutoriels',       href: '/tutorial',            icon: <BookMarked size={16} />,      color: '#7c3aed' },
-  { label: 'Statistique',     href: '/logbook/statistique', icon: <BarChart2 size={16} />,       color: '#0284c7' },
+  {
+    label: 'Statistiques', icon: <BarChart2 size={16} />, color: '#0284c7', children: [
+      { label: 'Chambres', href: '/statistics/rooms' },
+      { label: 'F&B',      href: '/statistics/fb' },
+    ],
+  },
   { label: 'Blanchisserie',   href: '/laundry',             icon: <Shirt size={16} />,           color: '#0ea5e9' },
   {
     label: 'Cost Control', icon: <TrendingUp size={16} />, color: '#0ea5e9', children: [
-      { label: 'Stats F&B',  href: '/cost-control/stats-fb' },
-      { label: 'Cost Room',  href: '/cost-control/cost-room' },
-      { label: 'Cost Food',  href: '/cost-control/cost-food' },
-      { label: 'Cost Bev',   href: '/cost-control/cost-bev' },
-      { label: 'Cost RH',    href: '/cost-control/cost-rh' },
+      { label: 'Stats F&B',     href: '/cost-control/stats-fb' },
+      { label: 'Cost Room',     href: '/cost-control/cost-room' },
+      { label: 'Cost Food',     href: '/cost-control/cost-food' },
+      { label: 'Cost Bev',      href: '/cost-control/cost-bev' },
+      { label: 'Cost RH',       href: '/cost-control/cost-rh' },
+      { label: 'Petit déjeuner', href: '/cost-control/breakfast' },
     ],
   },
   {
@@ -38,6 +44,7 @@ const navItems: NavItem[] = [
       { label: 'Chambres',          href: '/inventory/rooms' },
       { label: 'Boissons',          href: '/inventory/beverages' },
       { label: 'Alimentation',      href: '/inventory/food' },
+      { label: 'Petit déjeuner',    href: '/inventory/breakfast' },
       { label: 'Nettoyage F&B',     href: '/inventory/cleaning-fb' },
       { label: 'Nettoyage général', href: '/inventory/cleaning-general' },
       { label: 'Réunion',           href: '/inventory/meeting' },

@@ -6,7 +6,7 @@ import { FoodProductList } from './FoodProductList'
 import { AddProductModal } from './AddProductModal'
 import { Button } from '@/components/ui/button'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Plus, Upload } from 'lucide-react'
+import { Plus, Upload, Download } from 'lucide-react'
 import type { Product, StockMonth, Supplier, ProductCategory, RoomType, ProductType } from '@/lib/types'
 import { currentMonth, monthLabel } from '@/lib/utils'
 
@@ -22,6 +22,23 @@ interface Props {
   roomTypes: RoomType[]
   isAdmin: boolean
   salesOnly?: boolean
+}
+
+function exportCsv(rows: AnyRow[], month: string) {
+  const headers = ['Nom', 'SKU', 'Fournisseur', 'Catégorie', 'Unité', 'Conditionnement', 'Qté cond.', 'Prix HT', 'Stock min.', 'Délai livraison', 'Hôtel', 'Stock initial', 'Acheté', 'Utilisé', 'Stock théorique']
+  const esc = (v: unknown) => {
+    const s = v == null ? '' : String(v)
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const csv = [headers.map(esc).join(','), ...rows.map(({ product: p, stock, theoretical }) => [
+    p.name, p.sku, p.supplier?.name, p.category?.name, p.unit,
+    p.packaging_desc, p.packaging_qty, p.price_excl_tax, p.min_stock, p.delivery_days, p.hotel_scope,
+    stock?.opening_stock ?? 0, stock?.bought ?? 0, stock?.used ?? 0, theoretical,
+  ].map(esc).join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = `inventaire_${month}.csv`; a.click()
+  URL.revokeObjectURL(url)
 }
 
 function generateMonthOptions() {
@@ -250,6 +267,11 @@ export function InventoryPage({ rows: rowsProp = [], month: monthProp, type, sup
                 <Plus size={16} /> Ajouter un produit
               </Button>
             </>
+          )}
+          {!salesOnly && (
+            <Button variant="secondary" onClick={() => exportCsv(filteredRows, month)}>
+              <Download size={14} /> Exporter
+            </Button>
           )}
         </div>
       </div>

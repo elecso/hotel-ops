@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import type { LogbookNews, MorningMeeting, ToiletCheck } from '@/lib/types'
@@ -160,30 +160,27 @@ export function LogbookClient({ selectedDate, news: initialNews, meetings, toile
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {news.map(n => (
-                <Card key={n.id} hotel="mercure">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-base">{n.title}</CardTitle>
-                        {n.source && <p className="text-xs mt-0.5" style={{ color: '#C5C0B1' }}>Source: {n.source}</p>}
-                      </div>
+            <Card>
+              <CardContent className="py-4">
+                <ul className="space-y-2">
+                  {news.map(n => (
+                    <li key={n.id} className="flex items-start gap-2">
+                      <span className="mt-2 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#602460]" />
+                      <span className="flex-1 text-sm whitespace-pre-wrap" style={{ color: '#3D1640' }}>
+                        {n.body || n.title}
+                      </span>
                       <button
                         onClick={() => handleDeleteNews(n.id)}
-                        title="Supprimer cette actualité"
+                        title="Supprimer"
                         className="p-1 rounded text-[#C5C0B1] hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
                       >
                         <Trash2 size={14} />
                       </button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap" style={{ color: '#3D1640' }}>{n.body}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           )}
         </div>
 

@@ -26,7 +26,8 @@ export default async function LaundryPage({
       .eq('month', `${today.slice(0, 7)}-01`),
   ])
 
-  const rows = (products ?? []).map((p: { id: number }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (products ?? []).map((p: any) => {
     const stock = stockData?.find((s: { product_id: number }) => s.product_id === p.id) ?? null
     const theoretical = (stock?.opening_stock ?? 0) + (stock?.bought ?? 0) - (stock?.used ?? 0)
     return { product: p, stock, theoretical }

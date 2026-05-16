@@ -1,6 +1,6 @@
 export type Role = 'admin' | 'manager' | 'staff' | 'readonly'
 export type HotelAccess = 'mercure' | 'ibis' | 'both'
-export type ProductType = 'room' | 'beverage' | 'food' | 'cleaning_fb' | 'cleaning_general' | 'meeting' | 'laundry' | 'ingredient'
+export type ProductType = 'room' | 'beverage' | 'food' | 'cleaning_fb' | 'cleaning_general' | 'meeting' | 'laundry' | 'ingredient' | 'breakfast'
 export type RequisitionStatus = 'pending' | 'validated' | 'rejected'
 export type InvoiceStatus = 'pending' | 'ai_processed' | 'validated'
 export type EventType = 'meeting' | 'banqueting' | 'event'
@@ -52,6 +52,7 @@ export interface DailyStat {
   banquet_dinner_covers: number
   rps: number | null
   all_stars_count: number | null
+  adr: number | null
 }
 
 export interface FbDailySale {
@@ -199,12 +200,29 @@ export interface InvoiceLine {
 export interface Recipe {
   id: number
   name: string
+  category: 'food' | 'beverage' | null
   outlet: string
   portion_size_g: number
   selling_price: number
   is_active: boolean
   ingredients?: RecipeIngredient[]
   menu_items?: MenuItem[]
+}
+
+export interface Budget {
+  id: number
+  hotel_id: string
+  month: string
+  occupancy_budget: number | null
+  adr_budget: number | null
+}
+
+export interface HotelAllStars {
+  id: number
+  hotel_id: string
+  month: string
+  all_stars_mtd: number | null
+  all_stars_ytd: number | null
 }
 
 export interface RecipeIngredient {

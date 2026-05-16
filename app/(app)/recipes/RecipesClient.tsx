@@ -16,9 +16,12 @@ interface FoodProduct { id: number; name: string; unit: string; price_excl_tax: 
 interface MenuItemRef { id: number; name: string; outlet: string; recipe_id: number | null }
 interface IngredientDraft { product_id: string; quantity: string; unit: string }
 
+type TabCategory = 'food' | 'beverage'
+
 interface Props {
   recipes: Recipe[]
   foodProducts: FoodProduct[]
+  beverageProducts: FoodProduct[]
   allMenuItems: MenuItemRef[]
   isManager: boolean
 }
@@ -26,6 +29,7 @@ interface Props {
 interface Recipe {
   id: number
   name: string
+  category: 'food' | 'beverage' | null
   outlet: string
   portion_size_g: number
   selling_price: number
@@ -34,22 +38,29 @@ interface Recipe {
   menu_items: { id: number; name: string; outlet: string }[]
 }
 
-const OUTLETS = ['Breakfast', 'Déjeuner', 'Dîner', 'Room Service', 'Banquet', 'Bar', 'À l\'épicerie']
+const FOOD_OUTLETS = ['Breakfast', 'Déjeuner', 'Dîner', 'Room Service', 'Banquet', 'À l\'épicerie']
+const BEVERAGE_OUTLETS = ['Bar', 'Banquet', 'Room Service', 'À l\'épicerie']
 
-export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuItems, isManager }: Props) {
+export function RecipesClient({ recipes: initialRecipes, foodProducts, beverageProducts, allMenuItems, isManager }: Props) {
   const [recipes, setRecipes] = useState(initialRecipes)
+  const [activeTab, setActiveTab] = useState<TabCategory>('food')
   const [showModal, setShowModal] = useState(false)
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null)
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
 
-  const [form, setForm] = useState({ name: '', outlet: '', portion_size_g: '', selling_price: '' })
+  const [form, setForm] = useState({ name: '', category: 'food' as TabCategory, outlet: '', portion_size_g: '', selling_price: '' })
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string>('')
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([])
 
+  const filtered = recipes.filter(r => (r.category ?? 'food') === activeTab)
+
+  const productOptions = form.category === 'beverage' ? beverageProducts : foodProducts
+  const outletOptions = form.category === 'beverage' ? BEVERAGE_OUTLETS : FOOD_OUTLETS
+
   const openCreate = () => {
     setEditRecipe(null)
-    setForm({ name: '', outlet: '', portion_size_g: '', selling_price: '' })
+    setForm({ name: '', category: activeTab, outlet: '', portion_size_g: '', selling_price: '' })
     setSelectedMenuItemId('')
     setIngredients([{ product_id: '', quantity: '', unit: '' }])
     setShowModal(true)
@@ -59,6 +70,7 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
     setEditRecipe(r)
     setForm({
       name: r.name,
+      category: r.category ?? 'food',
       outlet: r.outlet ?? '',
       portion_size_g: String(r.portion_size_g ?? ''),
       selling_price: String(r.selling_price ?? ''),
@@ -83,6 +95,7 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
     setSaving(true)
     const recipeData = {
       name: form.name,
+      category: form.category,
       outlet: form.outlet || null,
       portion_size_g: form.portion_size_g ? parseFloat(form.portion_size_g) : null,
       selling_price: form.selling_price ? parseFloat(form.selling_price) : null,
@@ -132,9 +145,29 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      {/* Category tabs */}
+      <div className="flex gap-1 border-b border-[#C5C0B1]">
+        {([['food', 'Alimentation'], ['beverage', 'Boissons / Cocktails']] as [TabCategory, string][]).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === id
+                ? 'border-b-2 border-[#602460] text-[#602460]'
+                : 'text-[#C5C0B1] hover:text-[#3D1640]'
+            }`}
+          >
+            {label}
+            <span className="ml-2 text-xs font-mono">
+              ({recipes.filter(r => (r.category ?? 'food') === id).length})
+            </span>
+          </button>
+        ))}
+        <div className="flex-1" />
         {isManager && (
-          <Button onClick={openCreate}><Plus size={16} /> Créer une recette</Button>
+          <Button onClick={openCreate} className="mb-1 self-center">
+            <Plus size={16} /> Créer une recette
+          </Button>
         )}
       </div>
 
@@ -152,13 +185,13 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
             </TableRow>
           </TableHeader>
           <TableBody>
-            {recipes.length === 0 ? (
+            {filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8" style={{ color: '#C5C0B1' }}>
-                  Aucune recette. Créez votre première recette ci-dessus.
+                  Aucune recette dans cette catégorie.
                 </TableCell>
               </TableRow>
-            ) : recipes.map(r => (
+            ) : filtered.map(r => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.name}</TableCell>
                 <TableCell>{r.outlet ?? '—'}</TableCell>
@@ -197,6 +230,17 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
                 <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Salade niçoise" />
               </div>
               <div className="space-y-1.5">
+                <Label>Catégorie</Label>
+                <select
+                  value={form.category}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value as TabCategory, outlet: '' }))}
+                  className="flex h-9 w-full rounded-[6px] border border-[#C5C0B1] bg-white px-3 py-1 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
+                >
+                  <option value="food">Alimentation</option>
+                  <option value="beverage">Boisson / Cocktail</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
                 <Label>Outlet</Label>
                 <select
                   value={form.outlet}
@@ -204,7 +248,7 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
                   className="flex h-9 w-full rounded-[6px] border border-[#C5C0B1] bg-white px-3 py-1 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
                 >
                   <option value="">Sélectionner…</option>
-                  {OUTLETS.map(o => <option key={o} value={o}>{o}</option>)}
+                  {outletOptions.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -243,21 +287,21 @@ export function RecipesClient({ recipes: initialRecipes, foodProducts, allMenuIt
               </div>
               <div className="space-y-2">
                 {ingredients.map((ing, i) => {
-                  const sel = foodProducts.find(p => String(p.id) === ing.product_id)
+                  const sel = productOptions.find(p => String(p.id) === ing.product_id)
                   return (
                     <div key={i} className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <select
                           value={ing.product_id}
                           onChange={e => {
-                            const prod = foodProducts.find(p => String(p.id) === e.target.value)
+                            const prod = productOptions.find(p => String(p.id) === e.target.value)
                             updateIngredient(i, 'product_id', e.target.value)
                             if (prod) updateIngredient(i, 'unit', prod.unit)
                           }}
                           className="flex-1 h-9 rounded-[6px] border border-[#C5C0B1] bg-white px-3 text-sm text-[#3D1640] focus:outline-none focus:ring-2 focus:ring-[#7E3A7E]"
                         >
                           <option value="">Produit…</option>
-                          {foodProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          {productOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                         <Input
                           placeholder="Qté"

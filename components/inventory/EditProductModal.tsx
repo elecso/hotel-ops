@@ -32,6 +32,7 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
   })
 
   const [selectedRoomTypes, setSelectedRoomTypes] = useState<number[]>([])
+  const [localRoomTypes, setLocalRoomTypes] = useState<RoomType[]>(roomTypes)
 
   // Inline creation state
   const [localSuppliers, setLocalSuppliers] = useState(suppliers)
@@ -45,6 +46,15 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
     setLocalSuppliers(suppliers)
     setLocalCategories(categories)
   }, [suppliers, categories])
+
+  // Fetch room types directly when modal opens for room/laundry products
+  useEffect(() => {
+    if (open && (product.type === 'room' || product.type === 'laundry')) {
+      supabase.from('room_types').select('*').order('hotel_id, code').then(({ data }) => {
+        if (data) setLocalRoomTypes(data)
+      })
+    }
+  }, [open, product.type])
 
   useEffect(() => {
     if (product) {
@@ -73,9 +83,9 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
   const toggleRoomType = (id: number) =>
     setSelectedRoomTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
-  const filteredRoomTypes = (product.type === 'room' || product.type === 'laundry') && form.hotel_scope !== 'both'
-    ? roomTypes.filter(rt => rt.hotel_id === form.hotel_scope)
-    : roomTypes
+  const filteredRoomTypes = form.hotel_scope !== 'both'
+    ? localRoomTypes.filter(rt => rt.hotel_id === form.hotel_scope)
+    : localRoomTypes
 
   const handleCreateSupplier = async () => {
     if (!newSupplierName) return
@@ -122,11 +132,14 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
       if (pErr) throw pErr
 
       if (product.type === 'room' || product.type === 'laundry') {
-        await supabase.from('product_room_typologies').delete().eq('product_id', product.id)
-        if (selectedRoomTypes.length > 0) {
-          await supabase.from('product_room_typologies').insert(
-            selectedRoomTypes.map(rt => ({ product_id: product.id, room_type_id: rt }))
-          )
+        const res = await fetch('/api/inventory/room-typologies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: product.id, room_type_ids: selectedRoomTypes }),
+        })
+        if (!res.ok) {
+          const { error: rtErr } = await res.json()
+          throw new Error(rtErr ?? 'Erreur mise à jour typologies')
         }
       }
 
@@ -278,25 +291,29 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
             )}
           </div>
 
-          {(product.type === 'room' || product.type === 'laundry') && filteredRoomTypes.length > 0 && (
+          {(product.type === 'room' || product.type === 'laundry') && (
             <div className="space-y-2">
               <Label>Typologies de chambre</Label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {filteredRoomTypes.map(rt => (
-                  <label
-                    key={rt.id}
-                    className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-[#E5E2D8] hover:bg-[#F4F2ED] transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedRoomTypes.includes(rt.id)}
-                      onChange={() => toggleRoomType(rt.id)}
-                      className="w-4 h-4 accent-[#602460]"
-                    />
-                    <span className="text-xs text-[#3D1640]">{rt.code} — {rt.label}</span>
-                  </label>
-                ))}
-              </div>
+              {filteredRoomTypes.length === 0 ? (
+                <p className="text-xs text-[#B0A5B4]">Aucun type de chambre disponible.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {filteredRoomTypes.map(rt => (
+                    <label
+                      key={rt.id}
+                      className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-[#E5E2D8] hover:bg-[#F4F2ED] transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRoomTypes.includes(rt.id)}
+                        onChange={() => toggleRoomType(rt.id)}
+                        className="w-4 h-4 accent-[#602460]"
+                      />
+                      <span className="text-xs text-[#3D1640]">{rt.code} — {rt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

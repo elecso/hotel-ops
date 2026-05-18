@@ -75,8 +75,13 @@ export function AddProductModal({ open, onClose, onSaved, type: typeProp, defaul
 
   const handleCreateCategory = async () => {
     if (!newCategoryName) return
-    const { data } = await supabase.from('product_categories').insert({ name: newCategoryName, type }).select().single()
-    if (data) {
+    const res = await fetch('/api/inventory/category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newCategoryName, type }),
+    })
+    const data = await res.json()
+    if (res.ok && data?.id) {
       setLocalCategories(prev => [...prev, data])
       setForm(f => ({ ...f, category_id: String(data.id) }))
       setNewCategoryName('')

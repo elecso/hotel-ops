@@ -196,9 +196,9 @@ export function InventoryTable({ rows, month, isAdmin, onRefresh, suppliers, cat
     setExpandedSubs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const isBeverage = type === 'beverage'
-  const groupByCategory = !isBeverage
+  const groupByCategory = true
 
-  // Build category-grouped structure for non-beverage types
+  // Build category-grouped structure for all product types
   const categoryGroups: { catName: string; rows: StockRow[] }[] = []
   if (groupByCategory) {
     const seen = new Set<string>()

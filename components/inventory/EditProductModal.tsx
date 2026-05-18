@@ -47,12 +47,12 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
     setLocalCategories(categories)
   }, [suppliers, categories])
 
-  // Fetch room types directly when modal opens for room/laundry products
+  // Fetch room types via admin route on open (client anon key may not have SELECT on room_types)
   useEffect(() => {
     if (open && (product.type === 'room' || product.type === 'laundry')) {
-      supabase.from('room_types').select('*').order('hotel_id, code').then(({ data }) => {
-        if (data) setLocalRoomTypes(data)
-      })
+      fetch('/api/inventory/room-typologies')
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data) && data.length > 0) setLocalRoomTypes(data) })
     }
   }, [open, product.type])
 

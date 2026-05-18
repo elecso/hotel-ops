@@ -5,7 +5,15 @@ export async function GET() {
   const supabase = await createAdminClient()
   const { data, error } = await supabase.from('room_types').select('*').order('hotel_id, code')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  // Deduplicate by hotel_id+code in case the table has duplicate entries
+  const seen = new Set<string>()
+  const unique = (data ?? []).filter((rt: { hotel_id: string; code: string }) => {
+    const key = `${rt.hotel_id}-${rt.code}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  return NextResponse.json(unique)
 }
 
 export async function POST(req: NextRequest) {

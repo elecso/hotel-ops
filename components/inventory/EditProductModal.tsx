@@ -31,6 +31,8 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
     coefficient: '',
   })
 
+  const [selectedRoomTypes, setSelectedRoomTypes] = useState<number[]>([])
+
   // Inline creation state
   const [localSuppliers, setLocalSuppliers] = useState(suppliers)
   const [localCategories, setLocalCategories] = useState(categories)
@@ -61,11 +63,19 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
         hotel_scope: product.hotel_scope ?? 'both',
         coefficient: product.coefficient ? String(product.coefficient) : '',
       })
+      setSelectedRoomTypes((product.room_typologies ?? []).map(r => r.room_type_id))
     }
   }, [product])
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
+
+  const toggleRoomType = (id: number) =>
+    setSelectedRoomTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  const filteredRoomTypes = (product.type === 'room' || product.type === 'laundry') && form.hotel_scope !== 'both'
+    ? roomTypes.filter(rt => rt.hotel_id === form.hotel_scope)
+    : roomTypes
 
   const handleCreateSupplier = async () => {
     if (!newSupplierName) return
@@ -110,6 +120,16 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
       }).eq('id', product.id)
 
       if (pErr) throw pErr
+
+      if (product.type === 'room' || product.type === 'laundry') {
+        await supabase.from('product_room_typologies').delete().eq('product_id', product.id)
+        if (selectedRoomTypes.length > 0) {
+          await supabase.from('product_room_typologies').insert(
+            selectedRoomTypes.map(rt => ({ product_id: product.id, room_type_id: rt }))
+          )
+        }
+      }
+
       onSaved()
       onClose()
     } catch (e: unknown) {
@@ -257,6 +277,28 @@ export function EditProductModal({ open, onClose, onSaved, product, suppliers, c
               </div>
             )}
           </div>
+
+          {(product.type === 'room' || product.type === 'laundry') && filteredRoomTypes.length > 0 && (
+            <div className="space-y-2">
+              <Label>Typologies de chambre</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {filteredRoomTypes.map(rt => (
+                  <label
+                    key={rt.id}
+                    className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-[#E5E2D8] hover:bg-[#F4F2ED] transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRoomTypes.includes(rt.id)}
+                      onChange={() => toggleRoomType(rt.id)}
+                      className="w-4 h-4 accent-[#602460]"
+                    />
+                    <span className="text-xs text-[#3D1640]">{rt.code} — {rt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

@@ -25,7 +25,7 @@ export default async function CostRoomPage() {
     { data: allRoomTypes },
     { data: typologies },
   ] = await Promise.all([
-    supabase.from('products').select('id, name, unit, hotel_scope').eq('type', 'room').eq('is_active', true).order('name'),
+    supabase.from('products').select('id, name, unit, packaging_qty, hotel_scope').eq('type', 'room').eq('is_active', true).order('name'),
     supabase.from('stock_months').select('product_id, used').eq('month', month),
     supabase.from('daily_stats')
       .select('hotel_id, rooms_sold_sgl, rooms_sold_dba, rooms_sold_dbbz, rooms_sold_twcz, rooms_sold_privm, rooms_sold_dbl, rooms_sold_twi, rooms_sold_han')
@@ -42,7 +42,10 @@ export default async function CostRoomPage() {
   }
 
   const rows = (products ?? []).map((p: any) => {
-    const used = stock?.find((s: any) => s.product_id === p.id)?.used ?? 0
+    const usedBoxes = stock?.find((s: any) => s.product_id === p.id)?.used ?? 0
+    const packQty: number = p.packaging_qty ?? 1
+    // Convert boxes consumed → individual units consumed
+    const usedUnits = usedBoxes * packQty
 
     // Deduplicated set of codes assigned to this product
     const assignedCodes = new Set<string>()
@@ -60,14 +63,16 @@ export default async function CostRoomPage() {
       }
     }
 
-    const ratio = roomsSold > 0 ? used / roomsSold : null
+    const ratio = roomsSold > 0 ? usedUnits / roomsSold : null
     const codesLabel = [...assignedCodes].map(c => c.toUpperCase()).sort().join(', ')
 
     return {
       id: p.id as number,
       name: p.name as string,
       unit: (p.unit as string) ?? '',
-      used,
+      packQty,
+      usedBoxes,
+      usedUnits,
       roomsSold,
       ratio,
       codesLabel,
@@ -117,7 +122,10 @@ export default async function CostRoomPage() {
 
               <div className="flex justify-between text-xs text-[#7B6B80] border-t border-[#F0EDE8] pt-3">
                 <span>
-                  <span className="font-medium text-[#3D1640]">{r.used}</span>{r.unit ? ` ${r.unit}` : ''} consommés
+                  <span className="font-medium text-[#3D1640]">{r.usedUnits}</span>{r.unit ? ` ${r.unit}` : ''}
+                  {r.packQty > 1 && (
+                    <span className="text-[#C5C0B1] ml-1">({r.usedBoxes} cdt)</span>
+                  )}
                 </span>
                 <span>
                   <span className="font-medium text-[#3D1640]">{r.roomsSold}</span> nuits vendues

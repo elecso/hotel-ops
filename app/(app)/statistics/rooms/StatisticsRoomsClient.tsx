@@ -132,10 +132,10 @@ export function StatisticsRoomsClient({ dailyStatsMTD, forecast, budgetRows: ini
             },
             {
               label: 'RPS',
-              mercure: fmt(avg(byHotel('mercure').map(d => d.rps)), 2, ' €'),
-              ibis: fmt(avg(byHotel('ibis').map(d => d.rps)), 2, ' €'),
-              objM: `${RPS_OBJ['mercure']} €`,
-              objI: `${RPS_OBJ['ibis']} €`,
+              mercure: fmt(avg(byHotel('mercure').map(d => d.rps)), 1),
+              ibis: fmt(avg(byHotel('ibis').map(d => d.rps)), 1),
+              objM: `${RPS_OBJ['mercure']}`,
+              objI: `${RPS_OBJ['ibis']}`,
             },
           ]} />
         </CardContent></Card>

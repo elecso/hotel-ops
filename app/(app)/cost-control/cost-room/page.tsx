@@ -35,15 +35,10 @@ export default async function CostRoomPage() {
     supabase.from('product_room_typologies').select('product_id, room_type_id'),
   ])
 
-  // Build map: room_type_id → deduplicated code (first occurrence wins)
+  // Map every room_type_id (including duplicates) to its code so any referenced ID resolves
   const rtCodeMap = new Map<number, string>()
-  const seenRt = new Set<string>()
   for (const rt of (allRoomTypes ?? [])) {
-    const key = `${rt.hotel_id}-${rt.code}`
-    if (!seenRt.has(key)) {
-      seenRt.add(key)
-      rtCodeMap.set(rt.id, rt.code.toLowerCase())
-    }
+    rtCodeMap.set(rt.id, rt.code.toLowerCase())
   }
 
   const rows = (products ?? []).map((p: any) => {

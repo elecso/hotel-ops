@@ -21,7 +21,8 @@ export default async function DashboardPage({
   ] = await Promise.all([
     supabase.from('daily_stats').select('*').eq('stat_date', selectedDate),
     supabase.from('daily_stats').select('*').eq('stat_date', yesterday),
-    supabase.from('events').select('*').eq('event_date', selectedDate).order('event_name'),
+    // DB stores event_date 1 day ahead — query selectedDate+1 to get real events for selectedDate
+    supabase.from('events').select('*').eq('event_date', isoDate(new Date(new Date(selectedDate + 'T12:00:00').getTime() + 86400000))).order('event_name'),
     supabase
       .from('forecast_occupancy')
       .select('*')

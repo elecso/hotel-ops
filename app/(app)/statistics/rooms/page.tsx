@@ -12,6 +12,7 @@ export default async function StatisticsRoomsPage() {
   const currentMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const today = now.toISOString().slice(0, 10)
   const yearStart = `${now.getFullYear()}-01-01`
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
 
   const [
     { data: dailyStatsMTD },
@@ -25,9 +26,10 @@ export default async function StatisticsRoomsPage() {
       .gte('stat_date', currentMonthStart)
       .lte('stat_date', today),
     supabase
-      .from('forecast.occupancy')
+      .from('forecast_occupancy')
       .select('hotel_id, occupancy_pct')
-      .gte('forecast_date', today),
+      .gte('forecast_date', currentMonthStart)
+      .lte('forecast_date', monthEnd),
     supabase
       .from('budget')
       .select('*')

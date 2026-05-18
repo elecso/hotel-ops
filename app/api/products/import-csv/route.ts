@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { currentMonth } from '@/lib/utils'
 
 interface CsvRow {
   name: string
@@ -15,6 +16,7 @@ interface CsvRow {
   hotel_scope?: string
   category_name?: string
   supplier_name?: string
+  opening_stock?: string
 }
 
 function parseCsv(text: string): CsvRow[] {
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
 
     // Use admin client so category/supplier/product writes bypass RLS
     const admin = await createAdminClient()
+    const month = currentMonth()
     let created = 0
     let updated = 0
 
@@ -131,12 +134,26 @@ export async function POST(req: NextRequest) {
         .eq('type', type)
         .single()
 
+      let productId: number | null = null
       if (existing) {
         await admin.from('products').update(payload).eq('id', existing.id)
+        productId = existing.id
         updated++
       } else {
-        await admin.from('products').insert(payload)
+        const { data: created_ } = await admin.from('products').insert(payload).select('id').single()
+        productId = created_?.id ?? null
         created++
+      }
+
+      // Set opening_stock for current month if provided
+      if (productId && row.opening_stock?.trim()) {
+        const openingStock = parseFloat(row.opening_stock.replace(',', '.'))
+        if (!isNaN(openingStock)) {
+          await admin.from('stock_months').upsert(
+            { product_id: productId, month, opening_stock: openingStock },
+            { onConflict: 'product_id,month' }
+          )
+        }
       }
     }
 

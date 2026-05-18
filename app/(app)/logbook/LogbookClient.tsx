@@ -107,7 +107,11 @@ export function LogbookClient({ selectedDate, news: initialNews, meetings, toile
 
   const handleDeleteNews = async (id: number) => {
     setNews(prev => prev.filter(n => n.id !== id))
-    await supabase.from('logbook_news').delete().eq('id', id)
+    await fetch('/api/logbook/delete-news', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
   }
 
   const formatTime = (iso: string | null | undefined) => {

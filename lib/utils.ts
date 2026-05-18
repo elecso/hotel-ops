@@ -19,8 +19,7 @@ export function formatPct(value: number): string {
 }
 
 export function currentMonth(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  return isoDate(new Date()).slice(0, 8) + '01'
 }
 
 export function monthLabel(isoDate: string): string {
@@ -29,12 +28,14 @@ export function monthLabel(isoDate: string): string {
 }
 
 export function getWeekStart(date: Date = new Date()): Date {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  d.setDate(diff)
-  d.setHours(0, 0, 0, 0)
-  return d
+  // Resolve to the Paris local date first to avoid UTC-server offset issues
+  const localStr = isoDate(date)
+  const [y, m, d] = localStr.split('-').map(Number)
+  const local = new Date(y, m - 1, d)
+  const day = local.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  local.setDate(local.getDate() + diff)
+  return local
 }
 
 export function addDays(date: Date, days: number): Date {
@@ -44,5 +45,6 @@ export function addDays(date: Date, days: number): Date {
 }
 
 export function isoDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  // Use Paris local date — avoids UTC-server returning yesterday for French users
+  return date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' })
 }
